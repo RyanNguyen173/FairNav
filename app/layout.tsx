@@ -22,8 +22,12 @@ const THEME_INIT_SCRIPT = `(function () {
 })();`
 
 export default function RootLayout({ children }: { children: ReactNode }) {
+  // suppressHydrationWarning: THEME_INIT_SCRIPT above intentionally sets
+  // class="dark" on <html> before React hydrates, which the server has no
+  // way to predict - this is the standard, documented way to tell React
+  // that specific, expected mismatch is fine rather than a real bug.
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
