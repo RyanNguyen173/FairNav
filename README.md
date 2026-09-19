@@ -62,8 +62,8 @@ Two follow-ups are intentionally deferred and still open:
 - Phosphor icons (`@phosphor-icons/react`).
 - Gemini API (`@google/genai`), 4 Route Handlers under `app/api/*/route.ts`
   sharing helpers from `src/lib/gemini.ts`.
-- Supabase (`@supabase/supabase-js`) for phone/password auth (SMS-verified
-  at signup) and Postgres storage of encrypted profile data.
+- Supabase (`@supabase/supabase-js`) for email/password auth and Postgres
+  storage of encrypted profile data.
 - Web Crypto API (PBKDF2 + AES-256-GCM) for client-side encryption —
   `src/lib/crypto.ts`, no dependency.
 
@@ -102,19 +102,10 @@ is never enough to decrypt anything. `AuthContext.tsx` tracks an
 brief window between Supabase establishing the session and the key
 finishing derivation right after you submit the sign-in form.
 
-**Sign-up is phone + password, verified by SMS.** Signing up calls
-Supabase's phone-based `signUp()`, which texts a 6-digit code to the number
-entered (E.164 format, e.g. `+15551234567`) instead of sending a
-confirmation email. `AuthScreen.tsx`'s `PhoneVerificationForm` collects that
-code and calls `verifyOtp()`; only then does Supabase issue a session, and
-`AuthContext.tsx` derives the encryption key immediately afterward using the
-same password (held only in memory between those two steps, never
-persisted). If someone closes the tab mid-signup and comes back, signing in
-with the right phone/password detects the still-unconfirmed account
-(`phone_not_confirmed`) and resumes verification rather than erroring out.
-Password-only auth (no magic link) was a deliberate simplification, unrelated
-to the phone/email choice — a magic link can't supply a password to derive a
-key from anyway.
+Password-only auth (no magic link) was a deliberate simplification — the
+original spec's magic-link option couldn't supply a password to derive a
+key from anyway, so it would have needed this same unlock step immediately
+after signing in, which added a confusing extra screen for little benefit.
 
 ### Setup
 
@@ -127,12 +118,7 @@ key from anyway.
    (see `.env.example`). These are meant to ship in the client bundle — the
    anon key's access is enforced by the database's RLS policies, not by
    secrecy.
-4. Under Authentication → Providers, enable **Phone** and configure an SMS
-   provider (Twilio, MessageBird, Vonage, etc.) with its API credentials —
-   this is a real, usually-paid third-party service; Supabase itself doesn't
-   send SMS. Without this configured, signup will fail to send the
-   verification code.
-5. For deployment, set the same two env vars in Vercel's project settings.
+4. For deployment, set the same two variables in Vercel's project settings.
 
 ## Using the real AI backend
 
