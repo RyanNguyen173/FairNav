@@ -32,9 +32,20 @@ export function getClient(): GoogleGenAI {
  * (bad request, auth) fails immediately since retrying won't help.
  */
 export async function generateWithRetry(ai: GoogleGenAI, params: GenerateContentParameters, attempts = 2) {
+  // None of these 4 calls need multi-step reasoning - they're structured
+  // extraction/classification against a fixed schema. Gemini's "thinking"
+  // models otherwise spend a variable, model-chosen amount of extra time
+  // reasoning before responding, which is the main source of latency for a
+  // "flash-lite" model that's supposed to be fast. A caller can still opt
+  // back into it by passing its own thinkingConfig.
+  const requestParams: GenerateContentParameters = {
+    ...params,
+    config: { thinkingConfig: { thinkingBudget: 0 }, ...params.config },
+  }
+
   for (let attempt = 1; attempt <= attempts; attempt++) {
     try {
-      return await ai.models.generateContent(params)
+      return await ai.models.generateContent(requestParams)
     } catch (error) {
       const retryable = error instanceof ApiError && (error.status === 503 || error.status === 429)
       if (!retryable || attempt === attempts) throw error
