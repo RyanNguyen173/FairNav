@@ -1,0 +1,110 @@
+import { MapPin } from '@phosphor-icons/react'
+import { Button } from '../components/Button'
+import { Header } from '../components/Header'
+import { StepShell } from '../components/StepShell'
+import { mockGeneratePrep } from '../wizard/mockEngine'
+import type { Company, CompanyPrep } from '../wizard/types'
+import { useWizard } from '../wizard/WizardContext'
+
+function MatchBadge({ percent }: { percent: number }) {
+  const tone =
+    percent >= 80 ? 'bg-primary text-on-primary' : percent >= 60 ? 'bg-secondary text-on-secondary' : 'bg-muted text-muted-foreground'
+  return (
+    <span className={['shrink-0 rounded-full px-2.5 py-1 text-xs font-bold', tone].join(' ')}>{percent}% match</span>
+  )
+}
+
+function CompanyCard({
+  company,
+  selected,
+  onToggle,
+}: {
+  company: Company
+  selected: boolean
+  onToggle: () => void
+}) {
+  return (
+    <label
+      className={[
+        'flex cursor-pointer gap-3 rounded-2xl border p-4 transition-colors duration-150',
+        selected ? 'border-primary bg-primary/5' : 'border-border bg-card',
+      ].join(' ')}
+    >
+      <input
+        type="checkbox"
+        checked={selected}
+        onChange={onToggle}
+        className="mt-1 h-5 w-5 shrink-0 cursor-pointer accent-primary"
+        aria-label={`Select ${company.name} to visit`}
+      />
+      <div className="min-w-0 flex-1">
+        <div className="mb-1 flex items-start justify-between gap-2">
+          <h3 className="truncate text-[15px] font-bold text-card-foreground">{company.name}</h3>
+          <MatchBadge percent={company.matchPercent} />
+        </div>
+        <p className="mb-2 flex items-center gap-1 text-xs text-muted-foreground">
+          <MapPin size={13} weight="fill" aria-hidden="true" />
+          Booth {company.boothNumber}
+        </p>
+        <p className="mb-2.5 text-sm text-muted-foreground">{company.overview}</p>
+        <div className="flex flex-wrap gap-1.5">
+          {company.openRoles.map((role) => (
+            <span
+              key={role}
+              className="rounded-full border border-border bg-background px-2.5 py-1 text-xs font-medium text-foreground"
+            >
+              {role}
+            </span>
+          ))}
+        </div>
+      </div>
+    </label>
+  )
+}
+
+export function Step4CompanyMatcher() {
+  const { state, dispatch, goNext, goBack } = useWizard()
+  const { companies, selectedCompanyIds, profile } = state
+  const selectedCount = selectedCompanyIds.length
+
+  const handleGenerate = () => {
+    const prep: Record<string, CompanyPrep> = {}
+    for (const id of selectedCompanyIds) {
+      const company = companies.find((c) => c.id === id)
+      if (company) prep[id] = mockGeneratePrep(profile, company)
+    }
+    dispatch({ type: 'PREP_GENERATED', prep })
+    goNext()
+  }
+
+  return (
+    <>
+      <Header step={4} stepLabel="Ranked companies" onBack={goBack} />
+      <StepShell
+        footer={
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-semibold text-foreground">{selectedCount} Selected</span>
+            <Button fullWidth disabled={selectedCount === 0} onClick={handleGenerate}>
+              Generate Preparation &amp; Route
+            </Button>
+          </div>
+        }
+      >
+        <p className="mb-5 text-sm text-muted-foreground">
+          Ranked from most to least relevant to your profile. Select who you want to visit.
+        </p>
+
+        <div className="space-y-3">
+          {companies.map((company) => (
+            <CompanyCard
+              key={company.id}
+              company={company}
+              selected={selectedCompanyIds.includes(company.id)}
+              onToggle={() => dispatch({ type: 'TOGGLE_COMPANY_SELECTION', id: company.id })}
+            />
+          ))}
+        </div>
+      </StepShell>
+    </>
+  )
+}

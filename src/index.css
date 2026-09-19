@@ -1,0 +1,94 @@
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * FairNav design tokens.
+ * Light values come from the ui-ux-pro-max "Flat Design" system generated
+ * for a career-fair productivity tool (teal primary, orange accent).
+ * Dark values are hand-tuned variants of the same palette that keep the
+ * same 4.5:1 text-contrast floor rather than a naive inversion.
+ */
+@theme {
+  --font-sans: "Plus Jakarta Sans", system-ui, "Segoe UI", Roboto, sans-serif;
+
+  --color-primary: #0d9488;
+  --color-on-primary: #000000;
+  --color-secondary: #14b8a6;
+  --color-on-secondary: #0f172a;
+  --color-accent: #ea580c;
+  --color-on-accent: #000000;
+  --color-background: #f0fdfa;
+  --color-foreground: #134e4a;
+  --color-card: #ffffff;
+  --color-card-foreground: #134e4a;
+  --color-muted: #e8f1f4;
+  --color-muted-foreground: #475569;
+  --color-border: #99f6e4;
+  --color-destructive: #dc2626;
+  --color-on-destructive: #ffffff;
+  --color-success: #16a34a;
+  --color-on-success: #ffffff;
+  --color-ring: #0d9488;
+}
+
+.dark {
+  --color-primary: #2dd4bf;
+  --color-on-primary: #042f2e;
+  --color-secondary: #5eead4;
+  --color-on-secondary: #042f2e;
+  --color-accent: #fb923c;
+  --color-on-accent: #1c0a00;
+  --color-background: #0a0f14;
+  --color-foreground: #e2e8f0;
+  --color-card: #10181c;
+  --color-card-foreground: #e2e8f0;
+  --color-muted: #17222688;
+  --color-muted-foreground: #94a3b8;
+  --color-border: #1f3a38;
+  --color-destructive: #f87171;
+  --color-on-destructive: #450a0a;
+  --color-success: #4ade80;
+  --color-on-success: #052e14;
+  --color-ring: #2dd4bf;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  font-family: var(--font-sans);
+  background: var(--color-background);
+  color: var(--color-foreground);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
