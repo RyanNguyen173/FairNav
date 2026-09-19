@@ -1,6 +1,6 @@
 import { Type } from '@google/genai'
-import { MODEL, generateWithRetry, withGeminiHandler, describeProfile, type Req, type Res } from './_lib/gemini'
-import type { ProfileData } from '../src/wizard/types'
+import { MODEL, generateWithRetry, withGeminiHandler, describeProfile, type Req, type Res } from './_lib/gemini.js'
+import type { ProfileData } from '../src/wizard/types.js'
 
 interface PitchCompanyInput {
   companyName: string

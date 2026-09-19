@@ -1,6 +1,6 @@
 import { ApiError, GoogleGenAI, ThinkingLevel } from '@google/genai'
 import type { GenerateContentParameters } from '@google/genai'
-import type { ProfileData } from '../../src/wizard/types'
+import type { ProfileData } from '../../src/wizard/types.js'
 
 /**
  * Shared helpers for the 4 Gemini-only route handlers (parse-resume,

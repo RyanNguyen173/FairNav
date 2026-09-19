@@ -1,5 +1,5 @@
 import { Type, createPartFromBase64, createUserContent } from '@google/genai'
-import { MODEL, generateWithRetry, withGeminiHandler, type Req, type Res } from './_lib/gemini'
+import { MODEL, generateWithRetry, withGeminiHandler, type Req, type Res } from './_lib/gemini.js'
 
 interface ParseResumePayload {
   mimeType: string
