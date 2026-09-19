@@ -3,7 +3,7 @@ import { Button } from '../components/Button'
 import { Header } from '../components/Header'
 import { FieldLabel, SectionCard, StepShell } from '../components/StepShell'
 import { UploadDropzone } from '../components/UploadDropzone'
-import { mockParseResume } from '../wizard/mockEngine'
+import { parseResume } from '../wizard/aiEngine'
 import type { TargetPosition } from '../wizard/types'
 import { useWizard } from '../wizard/WizardContext'
 
@@ -20,7 +20,7 @@ export function Step1ResumeUpload() {
   const handleFile = async (file: File) => {
     dispatch({ type: 'RESUME_FILE_SELECTED', fileName: file.name })
     dispatch({ type: 'RESUME_PARSING' })
-    const parsed = await mockParseResume(file)
+    const parsed = await parseResume(file)
     dispatch({ type: 'RESUME_PARSED', contact: parsed.contact, skills: parsed.skills })
   }
 
