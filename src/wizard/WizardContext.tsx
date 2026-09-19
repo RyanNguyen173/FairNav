@@ -1,21 +1,10 @@
-import { useRouter } from 'next/navigation'
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useReducer,
-  type ReactNode,
-} from 'react'
+import { createContext, useContext, useEffect, useMemo, useReducer, type ReactNode } from 'react'
 import { useAuth } from '../auth/AuthContext'
 import { encryptJSON } from '../lib/crypto'
 import { supabase } from '../lib/supabaseClient'
 import {
   createFairProfile,
   initialWizardState,
-  STEP_ROUTES,
-  TOTAL_STEPS,
   type Company,
   type CompanyPrep,
   type ContactInfo,
@@ -30,7 +19,6 @@ import {
 const AUTOSAVE_DELAY_MS = 1500
 
 type Action =
-  | { type: 'GO_TO_STEP'; step: number }
   | { type: 'RESUME_FILE_SELECTED'; fileName: string }
   | { type: 'RESUME_PARSING' }
   | {
@@ -87,9 +75,6 @@ function updateActiveFair(state: WizardState, updater: (fair: FairProfile) => Fa
 
 function reducer(state: WizardState, action: Action): WizardState {
   switch (action.type) {
-    case 'GO_TO_STEP':
-      return { ...state, step: Math.min(Math.max(action.step, 1), TOTAL_STEPS) }
-
     case 'RESUME_FILE_SELECTED':
       return {
         ...state,
@@ -304,22 +289,16 @@ function reducer(state: WizardState, action: Action): WizardState {
       })
 
     case 'ENTER_FAIR_MODE':
-      return {
-        ...updateActiveFair(state, (fair) => ({
-          ...fair,
-          fairMode: { ...fair.fairMode, active: true, startedAt: Date.now() },
-        })),
-        step: 6,
-      }
+      return updateActiveFair(state, (fair) => ({
+        ...fair,
+        fairMode: { ...fair.fairMode, active: true, startedAt: Date.now() },
+      }))
     case 'EXIT_FAIR_MODE':
-      return {
-        ...updateActiveFair(state, (fair) => ({
-          ...fair,
-          fairMode: { ...fair.fairMode, active: false },
-          status: 'completed',
-        })),
-        step: 5,
-      }
+      return updateActiveFair(state, (fair) => ({
+        ...fair,
+        fairMode: { ...fair.fairMode, active: false },
+        status: 'completed',
+      }))
 
     case 'MARK_VISITED':
       return updateActiveFair(state, (fair) => ({
@@ -359,8 +338,6 @@ function reducer(state: WizardState, action: Action): WizardState {
 interface WizardContextValue {
   state: WizardState
   dispatch: React.Dispatch<Action>
-  goNext: () => void
-  goBack: () => void
 }
 
 const WizardContext = createContext<WizardContextValue | null>(null)
@@ -462,7 +439,6 @@ interface WizardProviderProps {
 }
 
 export function WizardProvider({ children, initialState }: WizardProviderProps) {
-  const router = useRouter()
   const [state, dispatch] = useReducer(
     reducer,
     initialState
@@ -507,19 +483,7 @@ export function WizardProvider({ children, initialState }: WizardProviderProps) 
     return () => clearTimeout(timeout)
   }, [state, session, encryptionKey])
 
-  const goNext = useCallback(() => {
-    const nextStep = Math.min(state.step + 1, TOTAL_STEPS)
-    dispatch({ type: 'GO_TO_STEP', step: nextStep })
-    router.push(STEP_ROUTES[nextStep] ?? STEP_ROUTES[1])
-  }, [state.step, router])
-
-  const goBack = useCallback(() => {
-    const prevStep = Math.max(state.step - 1, 1)
-    dispatch({ type: 'GO_TO_STEP', step: prevStep })
-    router.push(STEP_ROUTES[prevStep] ?? STEP_ROUTES[1])
-  }, [state.step, router])
-
-  const value = useMemo(() => ({ state, dispatch, goNext, goBack }), [state, goNext, goBack])
+  const value = useMemo(() => ({ state, dispatch }), [state])
 
   return <WizardContext.Provider value={value}>{children}</WizardContext.Provider>
 }
@@ -530,7 +494,7 @@ export function useWizard() {
   return ctx
 }
 
-/** The fair profile Steps 3-6 currently read/write. Always exists - one is seeded by default and every migration path guarantees at least one. */
+/** The fair profile the per-fair pages (ingestion, matches, briefs, fair mode) read/write. Always exists - one is seeded by default and every migration path guarantees at least one. */
 export function useActiveFair(): FairProfile {
   const { state } = useWizard()
   const fair = state.fairProfiles.find((f) => f.id === state.activeFairId)

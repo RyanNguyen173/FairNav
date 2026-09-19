@@ -5,8 +5,7 @@ import { BottomSheet } from '../components/BottomSheet'
 import { Button } from '../components/Button'
 import { RouteMap } from '../components/RouteMap'
 import { SectionCard } from '../components/StepShell'
-import { ThemeToggle } from '../components/ThemeToggle'
-import { STEP_ROUTES, type Company } from '../wizard/types'
+import type { Company } from '../wizard/types'
 import { useActiveFair, useWizard } from '../wizard/WizardContext'
 
 function useElapsedTime(startedAt: number | null) {
@@ -111,7 +110,7 @@ export function Step6FairModeHUD() {
   const [detailsId, setDetailsId] = useState<string | null>(null)
   const exitFairMode = () => {
     dispatch({ type: 'EXIT_FAIR_MODE' })
-    router.push(STEP_ROUTES[5])
+    router.push('/briefs')
   }
 
   const queue = companies.filter((c) => selectedCompanyIds.includes(c.id))
@@ -136,17 +135,14 @@ export function Step6FairModeHUD() {
               {visitedCount} of {queue.length} Visited
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <ThemeToggle />
-            <button
-              type="button"
-              onClick={exitFairMode}
-              aria-label="Exit Fair Mode"
-              className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <SignOut size={18} weight="bold" aria-hidden="true" />
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={exitFairMode}
+            aria-label="Exit Fair Mode"
+            className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <SignOut size={18} weight="bold" aria-hidden="true" />
+          </button>
         </div>
       </header>
 

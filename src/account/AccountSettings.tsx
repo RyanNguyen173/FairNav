@@ -1,13 +1,127 @@
-import { Plus, Trash } from '@phosphor-icons/react'
+import { Briefcase, GraduationCap, IdentificationCard, Plus, Trash } from '@phosphor-icons/react'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { Button } from '../components/Button'
 import { Chip } from '../components/Chip'
 import { Header } from '../components/Header'
 import { FieldLabel, SectionCard, StepShell, TextInput } from '../components/StepShell'
+import { UploadDropzone } from '../components/UploadDropzone'
+import { parseResume } from '../wizard/aiEngine'
 import { INTEREST_POOL, SKILL_POOL } from '../wizard/mockEngine'
-import type { Education, WorkExperience } from '../wizard/types'
+import type { Education, TargetPosition, WorkExperience } from '../wizard/types'
 import { useWizard } from '../wizard/WizardContext'
+
+const POSITION_OPTIONS: { value: TargetPosition; label: string; icon: typeof GraduationCap }[] = [
+  { value: 'internship', label: 'Internship', icon: GraduationCap },
+  { value: 'fulltime', label: 'Full-Time', icon: Briefcase },
+]
+
+function ResumeSection() {
+  const { state, dispatch } = useWizard()
+  const { resume } = state
+  const isParsed = resume.status === 'done'
+
+  const handleFile = async (file: File) => {
+    dispatch({ type: 'RESUME_FILE_SELECTED', fileName: file.name })
+    dispatch({ type: 'RESUME_PARSING' })
+    const parsed = await parseResume(file)
+    dispatch({
+      type: 'RESUME_PARSED',
+      contact: parsed.contact,
+      major: parsed.major,
+      gradYear: parsed.gradYear,
+      skills: parsed.skills,
+      interests: parsed.interests,
+      experience: parsed.experience,
+      education: parsed.education,
+    })
+  }
+
+  return (
+    <SectionCard className="mb-6 space-y-4">
+      <div>
+        <h2 className="mb-1 text-sm font-semibold text-foreground">Resume</h2>
+        <p className="text-sm text-muted-foreground">
+          Upload your resume to pull out your contact info and skills - this feeds every fair's company matching.
+        </p>
+      </div>
+
+      <div className="md:grid md:grid-cols-2 md:gap-6">
+        <div>
+          <div className="mb-6">
+            <UploadDropzone
+              label="Resume"
+              helperText="PDF or DOCX, up to 10MB."
+              accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+              fileName={resume.fileName}
+              status={resume.status === 'working' ? 'working' : 'idle'}
+              workingText="Parsing your resume…"
+              onFile={handleFile}
+            />
+          </div>
+
+          <div>
+            <FieldLabel htmlFor="target-position">Default target position</FieldLabel>
+            <div
+              id="target-position"
+              role="radiogroup"
+              aria-label="Target position"
+              className="grid grid-cols-2 gap-2 rounded-xl bg-muted p-1"
+            >
+              {POSITION_OPTIONS.map(({ value, label, icon: Icon }) => {
+                const selected = resume.targetPosition === value
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    role="radio"
+                    aria-checked={selected}
+                    onClick={() => dispatch({ type: 'SET_TARGET_POSITION', position: value })}
+                    className={[
+                      'flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-lg text-sm font-semibold',
+                      'transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                      selected ? 'bg-card text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground',
+                    ].join(' ')}
+                  >
+                    <Icon size={16} weight={selected ? 'fill' : 'regular'} aria-hidden="true" />
+                    {label}
+                  </button>
+                )
+              })}
+            </div>
+            <p className="mt-1.5 text-xs text-muted-foreground">Used as the starting position type for new fairs.</p>
+          </div>
+        </div>
+
+        <div className="mt-6 md:mt-0">
+          <SectionCard>
+            <h3 className="mb-3 text-sm font-semibold text-foreground">Extracted contact details</h3>
+            {isParsed ? (
+              <dl className="space-y-3">
+                {[
+                  ['Full name', resume.contact.fullName],
+                  ['Email', resume.contact.email],
+                  ['Phone', resume.contact.phone],
+                  ['University', resume.contact.university],
+                ].map(([label, value]) => (
+                  <div key={label}>
+                    <dt className="text-xs font-medium text-muted-foreground">{label}</dt>
+                    <dd className="text-[15px] text-card-foreground">{value}</dd>
+                  </div>
+                ))}
+              </dl>
+            ) : (
+              <div className="flex flex-col items-center justify-center gap-2 py-8 text-center">
+                <IdentificationCard size={28} weight="regular" className="text-muted-foreground" aria-hidden="true" />
+                <p className="text-sm text-muted-foreground">Upload a resume to see your extracted details here.</p>
+              </div>
+            )}
+          </SectionCard>
+        </div>
+      </div>
+    </SectionCard>
+  )
+}
 
 /** Chip list + free-text input with a type-ahead dropdown of matching options. */
 function TagPicker({
@@ -132,9 +246,7 @@ function ExperienceEditor({ entries }: { entries: WorkExperience[] }) {
         </Button>
       </div>
 
-      {entries.length === 0 && (
-        <p className="text-sm text-muted-foreground">No experience added yet — add a role or upload a resume on the previous step.</p>
-      )}
+      {entries.length === 0 && <p className="text-sm text-muted-foreground">No experience added yet — add a role or upload a resume above.</p>}
 
       {entries.map((entry, index) => (
         <EntryCard
@@ -249,9 +361,7 @@ function EducationEditor({ entries }: { entries: Education[] }) {
         </Button>
       </div>
 
-      {entries.length === 0 && (
-        <p className="text-sm text-muted-foreground">No education added yet — add a program or upload a resume on the previous step.</p>
-      )}
+      {entries.length === 0 && <p className="text-sm text-muted-foreground">No education added yet — add a program or upload a resume above.</p>}
 
       {entries.map((entry, index) => (
         <EntryCard
@@ -340,33 +450,25 @@ function EducationEditor({ entries }: { entries: Education[] }) {
   )
 }
 
-export function Step2ProfileEditor() {
-  const { state, dispatch, goBack } = useWizard()
+export function AccountSettings() {
+  const { state, dispatch } = useWizard()
   const router = useRouter()
   const { profile } = state
-  const proceedToDashboard = () => {
-    dispatch({ type: 'GO_TO_STEP', step: 3 })
-    router.push('/dashboard')
-  }
 
   return (
     <>
-      <Header step={2} stepLabel="Profile &amp; skills" onBack={goBack} />
-      <StepShell
-        footer={
-          <Button fullWidth onClick={proceedToDashboard}>
-            Save Profile &amp; Proceed
-          </Button>
-        }
-      >
+      <Header title="Account settings" onBack={() => router.push('/')} />
+      <StepShell>
         <p className="mb-5 text-sm text-muted-foreground">
-          Confirm your details, experience, and education so FairNav can rank the right companies for you.
+          Your resume, skills, and background - shared across every fair you create. Changes save automatically.
         </p>
+
+        <ResumeSection />
 
         <div className="md:grid md:grid-cols-2 md:items-start md:gap-8">
           <SectionCard className="mb-6 md:mb-0">
             <TagPicker
-              label="Extracted skills"
+              label="Skills"
               inputId="skills-input"
               selected={profile.skills}
               options={SKILL_POOL}

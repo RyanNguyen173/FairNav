@@ -1,10 +1,9 @@
-import { Buildings, CalendarBlank, CaretRight, Copy, MapPin, PencilSimple, Plus, Trash } from '@phosphor-icons/react'
+import { Buildings, CalendarBlank, CaretRight, Copy, MapPin, Plus, Trash } from '@phosphor-icons/react'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { Button } from '../components/Button'
-import { Header } from '../components/Header'
 import { Modal } from '../components/Modal'
-import { FieldLabel, SectionCard, StepShell, TextInput } from '../components/StepShell'
+import { FieldLabel, TextInput } from '../components/StepShell'
 import type { FairProfile, FairStatus, TargetPosition } from '../wizard/types'
 import { useWizard } from '../wizard/WizardContext'
 
@@ -20,9 +19,9 @@ const STATUS_CLASS: Record<FairStatus, string> = {
   completed: 'bg-success text-on-success',
 }
 
-/** Where "Resume / Enter Fair" should take you, based on how far this fair has gotten. */
-function resumeRouteFor(fair: FairProfile): string {
-  if (fair.fairMode.active) return '/fair-mode'
+/** Where "Resume / Enter Fair" should take you, based on how far this fair has gotten. `null` means it's live - switch to the Fair Day tab instead of navigating. */
+function resumeRouteFor(fair: FairProfile): string | null {
+  if (fair.fairMode.active) return null
   if (fair.companies.length === 0) return '/fair'
   if (Object.keys(fair.prep).length === 0) return '/matches'
   return '/briefs'
@@ -115,13 +114,18 @@ function CreateFairModal({
   )
 }
 
-function FairCard({ fair }: { fair: FairProfile }) {
+function FairCard({ fair, onEnterFairDay }: { fair: FairProfile; onEnterFairDay: () => void }) {
   const { dispatch } = useWizard()
   const router = useRouter()
 
   const handleResume = () => {
     dispatch({ type: 'SET_ACTIVE_FAIR', id: fair.id })
-    router.push(resumeRouteFor(fair))
+    const route = resumeRouteFor(fair)
+    if (route) {
+      router.push(route)
+    } else {
+      onEnterFairDay()
+    }
   }
   const handleDuplicate = () => dispatch({ type: 'DUPLICATE_FAIR_PROFILE', id: fair.id })
   const handleDelete = () => {
@@ -173,7 +177,7 @@ function FairCard({ fair }: { fair: FairProfile }) {
           icon={<CaretRight size={15} weight="bold" aria-hidden="true" />}
           onClick={handleResume}
         >
-          {fair.status === 'draft' && fair.companies.length === 0 ? 'Start' : 'Resume'}
+          {fair.fairMode.active ? 'Go to Fair Day' : fair.status === 'draft' && fair.companies.length === 0 ? 'Start' : 'Resume'}
         </Button>
         <button
           type="button"
@@ -196,57 +200,26 @@ function FairCard({ fair }: { fair: FairProfile }) {
   )
 }
 
-export function Step2_5CareerFairDashboard() {
+/** The "all your fairs" hub - Home's default tab. */
+export function FairBoard({ onEnterFairDay }: { onEnterFairDay: () => void }) {
   const { state } = useWizard()
-  const router = useRouter()
   const [modalOpen, setModalOpen] = useState(false)
-  const { resume, profile, fairProfiles } = state
+  const { resume, fairProfiles } = state
 
   return (
     <>
-      <Header step={2.5} stepLabel="Career fair dashboard" onBack={() => router.push('/profile')} />
-      <StepShell>
-        <p className="mb-5 text-sm text-muted-foreground">
-          Manage the fairs you&apos;re preparing for - each keeps its own matched companies, pitches, and progress.
-        </p>
+      <div className="mb-4 flex items-center justify-between gap-2">
+        <p className="text-sm text-muted-foreground">Each fair keeps its own matched companies, pitches, and progress.</p>
+        <Button icon={<Plus size={16} weight="bold" aria-hidden="true" />} onClick={() => setModalOpen(true)}>
+          Create New Fair
+        </Button>
+      </div>
 
-        <div className="md:grid md:grid-cols-[280px_1fr] md:items-start md:gap-8">
-          <SectionCard className="mb-6 space-y-3 md:mb-0">
-            <h2 className="text-sm font-semibold text-foreground">Your profile</h2>
-            <div>
-              <p className="text-[15px] font-bold text-card-foreground">{resume.contact.fullName || 'Unnamed student'}</p>
-              <p className="text-sm text-muted-foreground">{profile.major || 'No major set'}</p>
-              <p className="text-sm text-muted-foreground">{resume.contact.university || 'No university set'}</p>
-              <p className="text-sm text-muted-foreground">
-                {profile.gradYear ? `Class of ${profile.gradYear}` : 'Graduation year not set'}
-              </p>
-            </div>
-            <Button
-              variant="secondary"
-              fullWidth
-              icon={<PencilSimple size={15} weight="bold" aria-hidden="true" />}
-              onClick={() => router.push('/profile')}
-            >
-              Edit Base Profile
-            </Button>
-          </SectionCard>
-
-          <div>
-            <div className="mb-4 flex items-center justify-between gap-2">
-              <h2 className="text-sm font-semibold text-foreground">Career fairs</h2>
-              <Button icon={<Plus size={16} weight="bold" aria-hidden="true" />} onClick={() => setModalOpen(true)}>
-                Create New Fair
-              </Button>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              {fairProfiles.map((fair) => (
-                <FairCard key={fair.id} fair={fair} />
-              ))}
-            </div>
-          </div>
-        </div>
-      </StepShell>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {fairProfiles.map((fair) => (
+          <FairCard key={fair.id} fair={fair} onEnterFairDay={onEnterFairDay} />
+        ))}
+      </div>
 
       <CreateFairModal open={modalOpen} onClose={() => setModalOpen(false)} defaultTargetPosition={resume.targetPosition} />
     </>

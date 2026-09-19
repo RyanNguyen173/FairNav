@@ -8,7 +8,7 @@ import { analyzeFair } from '../wizard/aiEngine'
 import { useActiveFair, useWizard } from '../wizard/WizardContext'
 
 export function Step3FairIngestion() {
-  const { state, dispatch, goNext } = useWizard()
+  const { state, dispatch } = useWizard()
   const router = useRouter()
   const { profile } = state
   const fair = useActiveFair()
@@ -21,12 +21,12 @@ export function Step3FairIngestion() {
     dispatch({ type: 'FAIR_ANALYZING' })
     const companies = await analyzeFair(fair.companyDirectoryText, companyListFile, profile)
     dispatch({ type: 'COMPANIES_MATCHED', companies })
-    goNext()
+    router.push('/matches')
   }
 
   return (
     <>
-      <Header step={3} stepLabel="Fair details &amp; map" onBack={() => router.push('/dashboard')} />
+      <Header title="Fair details &amp; map" onBack={() => router.push('/')} />
       <StepShell
         footer={
           <Button fullWidth disabled={!canAnalyze} loading={fair.ingestStatus === 'working'} onClick={handleAnalyze}>

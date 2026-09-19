@@ -111,7 +111,6 @@ export interface FairProfile {
 }
 
 export interface WizardState {
-  step: number
   resume: ResumeData
   profile: ProfileData
   fairProfiles: FairProfile[]
@@ -148,20 +147,7 @@ export function createFairProfile(overrides: {
   }
 }
 
-export const TOTAL_STEPS = 6
-
-/** Maps each wizard step to its real route, for goNext/goBack navigation. */
-export const STEP_ROUTES: Record<number, string> = {
-  1: '/upload',
-  2: '/profile',
-  3: '/fair',
-  4: '/matches',
-  5: '/briefs',
-  6: '/fair-mode',
-}
-
 export const initialWizardState: WizardState = {
-  step: 1,
   resume: {
     fileName: null,
     status: 'idle',
@@ -177,10 +163,9 @@ export const initialWizardState: WizardState = {
     experience: [],
     education: [],
   },
-  // Seeded with one fair so the existing single-fair flow (Steps 3-6) keeps
-  // working unchanged until the dashboard UI for managing several exists.
-  // A fixed id (not crypto.randomUUID()) keeps this module-level constant
-  // deterministic between server/client evaluations.
+  // Seeded with one fair so a brand-new account always has something to
+  // show on the Fair Board. A fixed id (not crypto.randomUUID()) keeps this
+  // module-level constant deterministic between server/client evaluations.
   fairProfiles: [createFairProfile({ id: 'default', name: '' })],
   activeFairId: 'default',
 }

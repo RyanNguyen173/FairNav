@@ -44,20 +44,26 @@ Two follow-ups are intentionally deferred and still open:
   vision input to place booths at real positions is a natural next step, but
   adds another AI call (and more latency) per fair setup, so it's left as a
   deliberate choice rather than bundled in silently.
-- **No route guards.** Each wizard step is now a real URL (see "Stack"
+- **No route guards.** Each per-fair page is a real URL (see "Stack"
   below), but nothing stops visiting e.g. `/matches` directly before
   finishing `/fair` - it'll just render with empty data. Not a problem for
-  the intended flow (each step's own footer button is the only way forward),
-  but worth knowing if you're testing by typing URLs directly.
+  the intended flow (Home only links to a fair's next real step), but worth
+  knowing if you're testing by typing URLs directly.
 
 ## Stack
 
 - **Next.js (App Router) + React + TypeScript**, fully client-rendered
   (every page is a `'use client'` component - this app is an authenticated
   tool with per-user encrypted state, not content that benefits from SSR).
-- Six wizard steps as real routes (`/upload`, `/profile`, `/fair`, `/matches`,
-  `/briefs`, `/fair-mode`) instead of in-memory step switching - `/` redirects
-  to wherever `WizardContext` says you left off.
+- **Home (`/`) is the landing page after sign-in** - an account menu
+  (settings + sign out) top-right, and two tabs: **Fair Board** (every fair
+  you've created, `src/home/FairBoard.tsx`) and **Fair Day**
+  (`src/home/FairDay.tsx`, live Fair Mode for whichever fair is active, or a
+  prompt to start one that's ready). Resume upload and profile editing live
+  under **Account Settings** (`/account`), account-level rather than
+  per-fair since they don't change between fairs. Each fair's own pipeline -
+  directory ingestion (`/fair`), company matches (`/matches`), pitch briefs
+  (`/briefs`) - is reached from its card on the Fair Board.
 - Tailwind CSS v4 (`@tailwindcss/postcss`), design tokens in `app/globals.css`.
 - Phosphor icons (`@phosphor-icons/react`).
 - Gemini API (`@google/genai`), 4 Route Handlers under `app/api/*/route.ts`
@@ -149,10 +155,11 @@ app/
   layout.tsx             Root layout - metadata, theme-flash-prevention script
   providers.tsx           ThemeProvider + AuthProvider + auth gate, wraps every route
   globals.css              Tailwind import + design tokens
-  page.tsx                 / - redirects to wherever the wizard was left off
-  upload/, profile/, fair/, matches/, briefs/, fair-mode/
-                            One route per wizard step, each a thin page
-                            rendering the matching component from src/steps/
+  page.tsx                 / - Home (Fair Board / Fair Day tabs)
+  account/, fair/, matches/, briefs/
+                            One route per per-fair pipeline stage (plus
+                            account/ for settings), each a thin page
+                            rendering the matching component
   api/
     parse-resume/route.ts        Resume -> contact info, major, gradYear, skills, interests, experience, education
     parse-directory/route.ts     Exhibitor directory -> company + booth number pairs
@@ -163,14 +170,19 @@ supabase/
 src/
   auth/          AuthContext (Supabase session + encryption key lifecycle),
                  AuthScreen (sign in/up, password-unlock prompt)
+  home/          HomePage (tab switcher), FairBoard (all your fairs),
+                 FairDay (live Fair Mode or a prompt to start one)
+  account/       AccountSettings - resume upload + profile editor, account-level
   lib/           supabaseClient.ts, crypto.ts (PBKDF2 + AES-256-GCM, no deps),
                  gemini.ts (shared Gemini client/retry logic for the API routes)
   theme/         Light/dark theme context (persists to localStorage)
   wizard/        Wizard state (reducer), types, aiEngine (real calls) and
                  mockEngine (demo fallback data)
-  components/    Shared UI: Button, Chip, UploadDropzone, Header, RouteMap...
-  steps/         The six screens (Step1ResumeUpload ... Step6FairModeHUD),
-                 each with its own mobile (<768px) and desktop (>=768px) layout
+  components/    Shared UI: Button, Chip, UploadDropzone, Header, AccountMenu,
+                 RouteMap...
+  steps/         The per-fair pipeline screens (Step3FairIngestion ...
+                 Step6FairModeHUD), each with its own mobile (<768px) and
+                 desktop (>=768px) layout
 ```
 
 ## Design system

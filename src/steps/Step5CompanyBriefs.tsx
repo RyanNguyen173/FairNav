@@ -4,7 +4,6 @@ import { useState } from 'react'
 import { Button } from '../components/Button'
 import { Header } from '../components/Header'
 import { SectionCard, StepShell } from '../components/StepShell'
-import { STEP_ROUTES } from '../wizard/types'
 import { useActiveFair, useWizard } from '../wizard/WizardContext'
 
 function CopyButton({ text }: { text: string }) {
@@ -38,12 +37,12 @@ function CopyButton({ text }: { text: string }) {
 }
 
 export function Step5CompanyBriefs() {
-  const { dispatch, goBack } = useWizard()
+  const { dispatch } = useWizard()
   const router = useRouter()
   const { companies, selectedCompanyIds, prep } = useActiveFair()
   const enterFairMode = () => {
     dispatch({ type: 'ENTER_FAIR_MODE' })
-    router.push(STEP_ROUTES[6])
+    router.push('/')
   }
   const selectedCompanies = companies.filter((c) => selectedCompanyIds.includes(c.id))
   const [activeId, setActiveId] = useState(selectedCompanies[0]?.id)
@@ -52,7 +51,7 @@ export function Step5CompanyBriefs() {
 
   return (
     <>
-      <Header step={5} stepLabel="Briefs &amp; pitch prep" onBack={goBack} />
+      <Header title="Briefs &amp; pitch prep" onBack={() => router.push('/matches')} />
       <StepShell
         footer={
           <Button fullWidth onClick={enterFairMode}>

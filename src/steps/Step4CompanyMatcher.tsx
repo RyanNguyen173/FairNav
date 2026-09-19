@@ -1,4 +1,5 @@
 import { CheckCircle, MapPin } from '@phosphor-icons/react'
+import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { Button } from '../components/Button'
 import { Header } from '../components/Header'
@@ -64,7 +65,8 @@ function CompanyCard({
 }
 
 export function Step4CompanyMatcher() {
-  const { state, dispatch, goNext, goBack } = useWizard()
+  const { state, dispatch } = useWizard()
+  const router = useRouter()
   const { profile } = state
   const { companies, selectedCompanyIds } = useActiveFair()
   const selectedCount = selectedCompanyIds.length
@@ -80,7 +82,7 @@ export function Step4CompanyMatcher() {
       const prep = await generatePreps(profile, selectedCompanies)
 
       dispatch({ type: 'PREP_GENERATED', prep })
-      goNext()
+      router.push('/briefs')
     } finally {
       setIsGenerating(false)
     }
@@ -98,7 +100,7 @@ export function Step4CompanyMatcher() {
 
   return (
     <>
-      <Header step={4} stepLabel="Ranked companies" onBack={goBack} />
+      <Header title="Ranked companies" onBack={() => router.push('/fair')} />
       <StepShell
         footer={
           <div className="flex items-center gap-3 md:hidden">
