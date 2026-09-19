@@ -2,11 +2,13 @@ import { boothCoordinatesForIndex, mockAnalyzeFair, mockGeneratePrep, mockParseR
 import type { Company, CompanyPrep, ProfileData } from './types'
 
 /**
- * Real AI-backed resume parsing / company matching / pitch generation, via
- * the `/api/gemini` serverless function (holds GEMINI_API_KEY server-side).
- * Falls back to the demo mock engine if that request fails for any reason
- * (no key configured, offline, running under plain `vite dev`, rate limit,
- * etc.) so the wizard stays usable either way.
+ * Real AI-backed resume parsing / company matching / pitch generation.
+ * Resume parsing goes through `/api/resume-parser` (apilayer, holds
+ * RESUME_PARSER_API_KEY server-side); company matching and pitch generation
+ * go through `/api/gemini` (holds GEMINI_API_KEY server-side). Both fall
+ * back to the demo mock engine if the request fails for any reason (no key
+ * configured, offline, running under plain `vite dev`, rate limit, etc.) so
+ * the wizard stays usable either way.
  */
 
 type AiCompanyMatch = Omit<Company, 'id' | 'x' | 'y'>
@@ -37,9 +39,19 @@ function fileToBase64(file: File): Promise<string> {
 export async function parseResume(file: File): Promise<ParsedResume> {
   try {
     const dataBase64 = await fileToBase64(file)
-    return await callGemini<ParsedResume>('parseResume', { mimeType: file.type, dataBase64 })
+    const response = await fetch('/api/resume-parser', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mimeType: file.type, dataBase64 }),
+    })
+
+    if (!response.ok) {
+      throw new Error(`Resume parser request failed with status ${response.status}`)
+    }
+
+    return (await response.json()) as ParsedResume
   } catch (error) {
-    console.warn('Gemini resume parsing unavailable, using demo data:', error)
+    console.warn('Resume parser unavailable, using demo data:', error)
     return mockParseResume(file)
   }
 }

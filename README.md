@@ -9,12 +9,14 @@ Built for SASEhack 2026 — Social Impact and Design tracks.
 
 ## Status: real AI backend, with a demo fallback
 
-Resume parsing, company matching, and pitch generation call the **Gemini
-API** through a serverless function (`api/gemini.ts`) that holds the API key
-server-side. If that call fails for any reason — no key configured, offline,
-running under plain `vite dev`, rate limited — the app falls back to the
-original simulated data in `src/wizard/mockEngine.ts` so the wizard stays
-usable either way (a console warning notes when this happens).
+Resume parsing calls **apilayer's Resume Parser API** through
+`api/resume-parser.ts`. Company matching and pitch generation call the
+**Gemini API** through `api/gemini.ts`. Both serverless functions hold their
+API key server-side. If either call fails for any reason — no key
+configured, offline, running under plain `vite dev`, rate limited — the app
+falls back to the original simulated data in `src/wizard/mockEngine.ts` so
+the wizard stays usable either way (a console warning notes when this
+happens).
 
 Pitch generation for all selected companies happens in a single Gemini
 request rather than one request per company — fewer concurrent calls
@@ -41,7 +43,8 @@ Two follow-ups are intentionally deferred and still open:
 - Vite + React + TypeScript
 - Tailwind CSS v4 (`@tailwindcss/vite`), design tokens in `src/index.css`
 - Phosphor icons (`@phosphor-icons/react`)
-- Gemini API (`@google/genai`) behind a Vercel serverless function
+- Gemini API (`@google/genai`) and apilayer's Resume Parser API, each
+  behind its own Vercel serverless function
 
 ## Running locally
 
@@ -56,15 +59,18 @@ mock data.
 
 ## Using the real AI backend
 
-1. Get a free key from [Google AI Studio](https://aistudio.google.com/apikey).
-2. Copy `.env.example` to `.env` and paste your key into `GEMINI_API_KEY`.
+1. Get a Gemini key from [Google AI Studio](https://aistudio.google.com/apikey)
+   and a Resume Parser key from [apilayer](https://apilayer.com/marketplace/resume_parser-api).
+2. Copy `.env.example` to `.env` and paste both keys in
+   (`GEMINI_API_KEY` and `RESUME_PARSER_API_KEY`).
 3. Install the Vercel CLI once (`npm i -g vercel`), then run `vercel dev`
-   instead of `npm run dev` — this serves `api/gemini.ts` locally alongside
-   the Vite app and picks up `.env` automatically.
+   instead of `npm run dev` — this serves both `api/gemini.ts` and
+   `api/resume-parser.ts` locally alongside the Vite app and picks up `.env`
+   automatically.
 4. To deploy: import the repo at [vercel.com](https://vercel.com) (zero-config
-   for Vite), then set `GEMINI_API_KEY` as an environment variable in the
-   project's settings. Netlify works too, with the function moved to
-   `netlify/functions/`.
+   for Vite), then set both `GEMINI_API_KEY` and `RESUME_PARSER_API_KEY` as
+   environment variables in the project's settings. Netlify works too, with
+   the functions moved to `netlify/functions/`.
 
 Note: resume files are base64-encoded and sent in the function's request
 body, which has a practical size ceiling well under the 10MB the UI mentions
@@ -72,16 +78,22 @@ body, which has a practical size ceiling well under the 10MB the UI mentions
 a signed-upload flow later.
 
 `vercel.json` sets `api/gemini.ts`'s `maxDuration` to 60s (Vercel's default
-is much shorter and calls that include a document, like resume or exhibitor
-PDF parsing, can take longer than that). If you're on a plan with a lower
-cap, Vercel will tell you at deploy time — lower the number in `vercel.json`
-to match.
+is much shorter and calls that include a document, like the exhibitor PDF,
+can take longer than that). If you're on a plan with a lower cap, Vercel
+will tell you at deploy time — lower the number in `vercel.json` to match.
+
+apilayer's own docs don't show a confirmed field name for phone numbers in
+`api/resume-parser.ts`'s response mapping — it tries a couple of likely
+keys (`phone`, `phone_number`, `mobile`) and falls back to an empty string.
+If your real responses use a different key, adjust `PHONE_KEYS` in that
+file.
 
 ## Project structure
 
 ```
 api/
-  gemini.ts      Serverless function - holds GEMINI_API_KEY, calls Gemini
+  gemini.ts         Serverless function - holds GEMINI_API_KEY, calls Gemini
+  resume-parser.ts  Serverless function - holds RESUME_PARSER_API_KEY, calls apilayer
 src/
   theme/         Light/dark theme context (persists to localStorage)
   wizard/        Wizard state (reducer), types, aiEngine (real calls) and

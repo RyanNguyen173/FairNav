@@ -26,11 +26,6 @@ const MODEL = 'gemini-3.1-flash-lite'
 
 type AiCompanyMatch = Omit<Company, 'id' | 'x' | 'y'>
 
-interface ParseResumePayload {
-  mimeType: string
-  dataBase64: string
-}
-
 interface AnalyzeFairPayload {
   rawText: string
   file: { mimeType: string; dataBase64: string } | null
@@ -74,42 +69,6 @@ function describeProfile(profile: ProfileData): string {
     `- Skills: ${profile.skills.join(', ') || 'None listed'}`,
     `- Interests: ${profile.interests.join(', ') || 'None listed'}`,
   ].join('\n')
-}
-
-async function parseResume(ai: GoogleGenAI, payload: ParseResumePayload) {
-  const prompt = `Extract structured contact information and a list of professional/technical skills from the attached resume.
-
-Only include information that actually appears in the document. If a field is not present, use an empty string for that field - never invent placeholder values. List skills as short keywords or phrases (e.g. "Python", "Public Speaking"), deduplicated, most relevant first, at most 8.`
-
-  const response = await generateWithRetry(ai, {
-    model: MODEL,
-    contents: createUserContent([
-      prompt,
-      createPartFromBase64(payload.dataBase64, payload.mimeType || 'application/pdf'),
-    ]),
-    config: {
-      responseMimeType: 'application/json',
-      responseSchema: {
-        type: Type.OBJECT,
-        properties: {
-          contact: {
-            type: Type.OBJECT,
-            properties: {
-              fullName: { type: Type.STRING },
-              email: { type: Type.STRING },
-              phone: { type: Type.STRING },
-              university: { type: Type.STRING },
-            },
-            required: ['fullName', 'email', 'phone', 'university'],
-          },
-          skills: { type: Type.ARRAY, items: { type: Type.STRING } },
-        },
-        required: ['contact', 'skills'],
-      },
-    },
-  })
-
-  return JSON.parse(response.text ?? '{}')
 }
 
 async function analyzeFair(ai: GoogleGenAI, payload: AnalyzeFairPayload): Promise<AiCompanyMatch[]> {
@@ -217,9 +176,6 @@ export default async function handler(req: Req, res: Res) {
     const ai = getClient()
 
     switch (action) {
-      case 'parseResume':
-        res.status(200).json(await parseResume(ai, payload as ParseResumePayload))
-        return
       case 'analyzeFair':
         res.status(200).json(await analyzeFair(ai, payload as AnalyzeFairPayload))
         return
