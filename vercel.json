@@ -1,9 +1,15 @@
 {
   "functions": {
-    "api/gemini.ts": {
+    "api/parse-resume.ts": {
       "maxDuration": 60
     },
-    "api/resume-parser.ts": {
+    "api/parse-directory.ts": {
+      "maxDuration": 60
+    },
+    "api/rank-companies.ts": {
+      "maxDuration": 60
+    },
+    "api/generate-pitches.ts": {
       "maxDuration": 60
     }
   }

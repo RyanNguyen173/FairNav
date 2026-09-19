@@ -5,14 +5,17 @@ interface StepShellProps {
   footer?: ReactNode
 }
 
-/** Shared mobile-first single-column layout for every step in the flow. */
+/**
+ * Shared layout for every step: single column on mobile (<768px), a wider
+ * canvas on desktop (>=768px) so each step's own 2-column split has room.
+ */
 export function StepShell({ children, footer }: StepShellProps) {
   return (
-    <div className="mx-auto flex w-full max-w-md flex-1 flex-col">
-      <div className="flex-1 px-4 pb-6 pt-5">{children}</div>
+    <div className="mx-auto flex w-full max-w-md flex-1 flex-col md:max-w-5xl">
+      <div className="flex-1 px-4 pb-6 pt-5 md:px-8 md:pt-8">{children}</div>
       {footer && (
-        <div className="sticky bottom-0 border-t border-border bg-background/95 px-4 py-3 backdrop-blur">
-          {footer}
+        <div className="sticky bottom-0 border-t border-border bg-background/95 px-4 py-3 backdrop-blur md:px-8">
+          <div className="mx-auto w-full md:max-w-5xl">{footer}</div>
         </div>
       )}
     </div>

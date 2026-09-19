@@ -54,9 +54,9 @@ function QueueCard({
           {visited ? <CheckCircle size={16} weight="fill" aria-hidden="true" /> : position}
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-[15px] font-bold text-card-foreground">{company.name}</span>
+          <span className="block truncate text-[15px] font-bold text-card-foreground">{company.companyName}</span>
           <span className="block text-xs text-muted-foreground">
-            Booth {company.boothNumber} · {company.matchPercent}% match
+            Booth {company.boothNumber} · {company.matchScore}% match
           </span>
         </span>
       </button>
@@ -81,6 +81,28 @@ function QueueCard({
   )
 }
 
+function PitchDetails({ company, pitch }: { company: Company; pitch: { elevatorPitch: string; questions: string[] } }) {
+  return (
+    <div className="space-y-4">
+      <p className="text-xs text-muted-foreground">Booth {company.boothNumber}</p>
+      <div>
+        <h3 className="mb-2 text-sm font-semibold text-foreground">Elevator pitch</h3>
+        <p className="text-sm leading-relaxed text-card-foreground">{pitch.elevatorPitch}</p>
+      </div>
+      <div>
+        <h3 className="mb-2 text-sm font-semibold text-foreground">Questions to ask</h3>
+        <ul className="space-y-2">
+          {pitch.questions.map((question, index) => (
+            <li key={index} className="text-sm leading-relaxed text-card-foreground">
+              {question}
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  )
+}
+
 export function Step6FairModeHUD() {
   const { state, dispatch } = useWizard()
   const { companies, selectedCompanyIds, prep, fairMode } = state
@@ -90,13 +112,18 @@ export function Step6FairModeHUD() {
   const unvisitedQueue = queue.filter((c) => !fairMode.companyState[c.id]?.visited)
   const visitedCount = queue.length - unvisitedQueue.length
   const elapsed = useElapsedTime(fairMode.startedAt)
+  // Mobile bottom sheet only opens on an explicit tap.
   const detailsCompany = queue.find((c) => c.id === detailsId) ?? null
   const detailsPrep = detailsCompany ? prep[detailsCompany.id] : undefined
+  // Desktop side panel always shows something - defaults to the first booth
+  // in the queue until the visitor picks a different one.
+  const activeCompany = queue.find((c) => c.id === detailsId) ?? queue[0] ?? null
+  const activePrep = activeCompany ? prep[activeCompany.id] : undefined
 
   return (
     <div className="flex flex-1 flex-col">
-      <header className="sticky top-0 z-20 border-b border-border bg-background/95 px-4 py-3 backdrop-blur">
-        <div className="mx-auto flex max-w-md items-center justify-between gap-3">
+      <header className="sticky top-0 z-20 border-b border-border bg-background/95 px-4 py-3 backdrop-blur md:px-8">
+        <div className="mx-auto flex max-w-md items-center justify-between gap-3 md:max-w-5xl">
           <div>
             <p className="text-xs font-medium text-muted-foreground">Fair Mode · {elapsed}</p>
             <p className="text-sm font-bold text-foreground">
@@ -117,60 +144,57 @@ export function Step6FairModeHUD() {
         </div>
       </header>
 
-      <div className="mx-auto w-full max-w-md flex-1 px-4 pb-8 pt-4">
-        <div className="mb-5 h-56">
-          <RouteMap allCompanies={companies} queue={queue} visitedIds={new Set(queue.filter((c) => fairMode.companyState[c.id]?.visited).map((c) => c.id))} />
-        </div>
-
-        <h2 className="mb-3 text-sm font-semibold text-foreground">Your route</h2>
-        <div className="space-y-3">
-          {queue.map((company) => {
-            const companyState = fairMode.companyState[company.id]
-            const visited = Boolean(companyState?.visited)
-            const position = visited ? null : unvisitedQueue.findIndex((c) => c.id === company.id) + 1
-            return (
-              <QueueCard
-                key={company.id}
-                company={company}
-                position={position}
-                visited={visited}
-                note={companyState?.note ?? ''}
-                onOpenDetails={() => setDetailsId(company.id)}
-                onMarkVisited={() => dispatch({ type: 'MARK_VISITED', id: company.id })}
-                onNoteChange={(value) => dispatch({ type: 'SET_NOTE', id: company.id, note: value })}
+      <div className="mx-auto w-full max-w-md flex-1 px-4 pb-8 pt-4 md:max-w-5xl md:px-8">
+        <div className="md:grid md:grid-cols-[1fr_340px] md:items-start md:gap-6">
+          <div>
+            <div className="mb-5 h-56">
+              <RouteMap
+                allCompanies={companies}
+                queue={queue}
+                visitedIds={new Set(queue.filter((c) => fairMode.companyState[c.id]?.visited).map((c) => c.id))}
               />
-            )
-          })}
+            </div>
+
+            <h2 className="mb-3 text-sm font-semibold text-foreground">Your route</h2>
+            <div className="space-y-3">
+              {queue.map((company) => {
+                const companyState = fairMode.companyState[company.id]
+                const visited = Boolean(companyState?.visited)
+                const position = visited ? null : unvisitedQueue.findIndex((c) => c.id === company.id) + 1
+                return (
+                  <QueueCard
+                    key={company.id}
+                    company={company}
+                    position={position}
+                    visited={visited}
+                    note={companyState?.note ?? ''}
+                    onOpenDetails={() => setDetailsId(company.id)}
+                    onMarkVisited={() => dispatch({ type: 'MARK_VISITED', id: company.id })}
+                    onNoteChange={(value) => dispatch({ type: 'SET_NOTE', id: company.id, note: value })}
+                  />
+                )
+              })}
+            </div>
+          </div>
+
+          <div className="sticky top-24 mt-6 hidden rounded-2xl border border-border bg-card p-4 md:mt-0 md:block">
+            {activeCompany && activePrep ? (
+              <>
+                <h2 className="mb-3 text-sm font-bold text-foreground">{activeCompany.companyName}</h2>
+                <PitchDetails company={activeCompany} pitch={activePrep} />
+              </>
+            ) : (
+              <p className="text-sm text-muted-foreground">Select a booth to see its pitch script and questions.</p>
+            )}
+          </div>
         </div>
       </div>
 
-      <BottomSheet open={Boolean(detailsCompany)} title={detailsCompany?.name ?? ''} onClose={() => setDetailsId(null)}>
-        {detailsCompany && detailsPrep && (
-          <div className="space-y-4">
-            <p className="text-xs text-muted-foreground">Booth {detailsCompany.boothNumber}</p>
-            <div>
-              <h3 className="mb-2 text-sm font-semibold text-foreground">Elevator pitch</h3>
-              <ul className="space-y-2">
-                {detailsPrep.talkingPoints.map((point, index) => (
-                  <li key={index} className="text-sm leading-relaxed text-card-foreground">
-                    {point}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div>
-              <h3 className="mb-2 text-sm font-semibold text-foreground">Questions to ask</h3>
-              <ul className="space-y-2">
-                {detailsPrep.questions.map((question, index) => (
-                  <li key={index} className="text-sm leading-relaxed text-card-foreground">
-                    {question}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        )}
-      </BottomSheet>
+      <div className="md:hidden">
+        <BottomSheet open={Boolean(detailsCompany)} title={detailsCompany?.companyName ?? ''} onClose={() => setDetailsId(null)}>
+          {detailsCompany && detailsPrep && <PitchDetails company={detailsCompany} pitch={detailsPrep} />}
+        </BottomSheet>
+      </div>
     </div>
   )
 }

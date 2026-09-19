@@ -35,23 +35,26 @@ export interface FairData {
   status: AsyncStatus
 }
 
+export interface Booth {
+  boothNumber: string
+  companyName: string
+}
+
 export interface Company {
   id: string
-  name: string
+  companyName: string
   boothNumber: string
-  overview: string
+  summary: string
   openRoles: string[]
-  skillTags: string[]
-  industry: string
   /** 0-100 coordinates on the booth map */
   x: number
   y: number
-  /** computed once companies are matched against the profile */
-  matchPercent: number
+  /** 0-100, computed once companies are matched against the profile */
+  matchScore: number
 }
 
 export interface CompanyPrep {
-  talkingPoints: string[]
+  elevatorPitch: string
   questions: string[]
 }
 

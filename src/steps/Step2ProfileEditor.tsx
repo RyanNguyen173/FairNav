@@ -42,98 +42,103 @@ export function Step2ProfileEditor() {
           Confirm your details and skills so FairNav can rank the right companies for you.
         </p>
 
-        <SectionCard className="mb-6 space-y-4">
-          <div>
-            <FieldLabel htmlFor="major">Major</FieldLabel>
-            <TextInput
-              id="major"
-              value={profile.major}
-              placeholder="e.g. Computer Science"
-              onChange={(event) =>
-                dispatch({ type: 'SET_PROFILE_FIELD', field: 'major', value: event.target.value })
-              }
-            />
-          </div>
-          <div>
-            <FieldLabel htmlFor="gradYear">Graduation year</FieldLabel>
-            <TextInput
-              id="gradYear"
-              inputMode="numeric"
-              value={profile.gradYear}
-              placeholder="e.g. 2027"
-              onChange={(event) =>
-                dispatch({ type: 'SET_PROFILE_FIELD', field: 'gradYear', value: event.target.value })
-              }
-            />
-          </div>
-          <div>
-            <FieldLabel htmlFor="experience">Experience level</FieldLabel>
-            <select
-              id="experience"
-              value={profile.experienceLevel}
-              onChange={(event) =>
-                dispatch({ type: 'SET_EXPERIENCE_LEVEL', value: event.target.value as ExperienceLevel })
-              }
-              className="min-h-11 w-full rounded-xl border border-border bg-card px-3.5 text-[15px] text-card-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              {EXPERIENCE_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
-        </SectionCard>
-
-        <div className="mb-6">
-          <FieldLabel htmlFor="skills-input">Skills</FieldLabel>
-          <div className="mb-3 flex flex-wrap gap-2">
-            {profile.skills.length === 0 && (
-              <p className="text-sm text-muted-foreground">No skills yet — add some below.</p>
-            )}
-            {profile.skills.map((skill) => (
-              <Chip key={skill} label={skill} onRemove={() => dispatch({ type: 'REMOVE_SKILL', skill })} />
-            ))}
-          </div>
-          <div className="flex gap-2">
-            <TextInput
-              id="skills-input"
-              value={customTag}
-              placeholder="Add a custom skill"
-              onChange={(event) => setCustomTag(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') {
-                  event.preventDefault()
-                  addCustomSkill()
+        <div className="md:grid md:grid-cols-2 md:items-start md:gap-8">
+          <SectionCard className="mb-6 space-y-4 md:mb-0">
+            <h2 className="text-sm font-semibold text-foreground">Core academic summary</h2>
+            <div>
+              <FieldLabel htmlFor="major">Major</FieldLabel>
+              <TextInput
+                id="major"
+                value={profile.major}
+                placeholder="e.g. Computer Science"
+                onChange={(event) =>
+                  dispatch({ type: 'SET_PROFILE_FIELD', field: 'major', value: event.target.value })
                 }
-              }}
-            />
-            <Button variant="secondary" icon={<Plus size={16} weight="bold" aria-hidden="true" />} onClick={addCustomSkill}>
-              Add
-            </Button>
-          </div>
-        </div>
+              />
+            </div>
+            <div>
+              <FieldLabel htmlFor="gradYear">Graduation year</FieldLabel>
+              <TextInput
+                id="gradYear"
+                inputMode="numeric"
+                value={profile.gradYear}
+                placeholder="e.g. 2027"
+                onChange={(event) =>
+                  dispatch({ type: 'SET_PROFILE_FIELD', field: 'gradYear', value: event.target.value })
+                }
+              />
+            </div>
+            <div>
+              <FieldLabel htmlFor="experience">Experience level</FieldLabel>
+              <select
+                id="experience"
+                value={profile.experienceLevel}
+                onChange={(event) =>
+                  dispatch({ type: 'SET_EXPERIENCE_LEVEL', value: event.target.value as ExperienceLevel })
+                }
+                className="min-h-11 w-full rounded-xl border border-border bg-card px-3.5 text-[15px] text-card-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                {EXPERIENCE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </SectionCard>
 
-        <div>
-          <FieldLabel htmlFor="interests">Interests</FieldLabel>
-          <div id="interests" className="flex flex-wrap gap-2">
-            {interestOptions.map((interest) => {
-              const selected = profile.interests.includes(interest)
-              return (
-                <Chip
-                  key={interest}
-                  label={interest}
-                  selected={selected}
-                  onClick={() =>
-                    dispatch(
-                      selected
-                        ? { type: 'REMOVE_INTEREST', interest }
-                        : { type: 'ADD_INTEREST', interest },
-                    )
-                  }
+          <div>
+            <SectionCard className="mb-6">
+              <FieldLabel htmlFor="skills-input">Extracted skills</FieldLabel>
+              <div className="mb-3 flex flex-wrap gap-2">
+                {profile.skills.length === 0 && (
+                  <p className="text-sm text-muted-foreground">No skills yet — add some below.</p>
+                )}
+                {profile.skills.map((skill) => (
+                  <Chip key={skill} label={skill} onRemove={() => dispatch({ type: 'REMOVE_SKILL', skill })} />
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <TextInput
+                  id="skills-input"
+                  value={customTag}
+                  placeholder="Add a custom skill"
+                  onChange={(event) => setCustomTag(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault()
+                      addCustomSkill()
+                    }
+                  }}
                 />
-              )
-            })}
+                <Button variant="secondary" icon={<Plus size={16} weight="bold" aria-hidden="true" />} onClick={addCustomSkill}>
+                  Add
+                </Button>
+              </div>
+            </SectionCard>
+
+            <SectionCard>
+              <FieldLabel htmlFor="interests">Focus &amp; industry interests</FieldLabel>
+              <div id="interests" className="flex flex-wrap gap-2">
+                {interestOptions.map((interest) => {
+                  const selected = profile.interests.includes(interest)
+                  return (
+                    <Chip
+                      key={interest}
+                      label={interest}
+                      selected={selected}
+                      onClick={() =>
+                        dispatch(
+                          selected
+                            ? { type: 'REMOVE_INTEREST', interest }
+                            : { type: 'ADD_INTEREST', interest },
+                        )
+                      }
+                    />
+                  )
+                })}
+              </div>
+            </SectionCard>
           </div>
         </div>
       </StepShell>

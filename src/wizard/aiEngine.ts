@@ -1,27 +1,25 @@
 import { boothCoordinatesForIndex, mockAnalyzeFair, mockGeneratePrep, mockParseResume, type ParsedResume } from './mockEngine'
-import type { Company, CompanyPrep, ProfileData } from './types'
+import type { Booth, Company, CompanyPrep, ProfileData } from './types'
 
 /**
- * Real AI-backed resume parsing / company matching / pitch generation.
- * Resume parsing goes through `/api/resume-parser` (apilayer, holds
- * RESUME_PARSER_API_KEY server-side); company matching and pitch generation
- * go through `/api/gemini` (holds GEMINI_API_KEY server-side). Both fall
- * back to the demo mock engine if the request fails for any reason (no key
+ * Real AI-backed resume parsing / directory parsing / company ranking /
+ * pitch generation - each its own serverless function (api/parse-resume.ts,
+ * api/parse-directory.ts, api/rank-companies.ts, api/generate-pitches.ts),
+ * all calling Gemini directly, holding GEMINI_API_KEY server-side. Falls
+ * back to the demo mock engine if a request fails for any reason (no key
  * configured, offline, running under plain `vite dev`, rate limit, etc.) so
  * the wizard stays usable either way.
  */
 
-type AiCompanyMatch = Omit<Company, 'id' | 'x' | 'y'>
-
-async function callGemini<T>(action: string, payload: unknown): Promise<T> {
-  const response = await fetch('/api/gemini', {
+async function callApi<T>(endpoint: string, payload: unknown): Promise<T> {
+  const response = await fetch(endpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action, payload }),
+    body: JSON.stringify({ payload }),
   })
 
   if (!response.ok) {
-    throw new Error(`Gemini request failed with status ${response.status}`)
+    throw new Error(`${endpoint} request failed with status ${response.status}`)
   }
 
   return (await response.json()) as T
@@ -36,25 +34,36 @@ function fileToBase64(file: File): Promise<string> {
   })
 }
 
+interface ParseResumeResponse {
+  name: string
+  email: string
+  phone: string
+  university: string
+  major: string
+  gradYear: string
+  skills: string[]
+  interests: string[]
+}
+
 export async function parseResume(file: File): Promise<ParsedResume> {
   try {
     const dataBase64 = await fileToBase64(file)
-    const response = await fetch('/api/resume-parser', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ mimeType: file.type, dataBase64 }),
-    })
+    const data = await callApi<ParseResumeResponse>('/api/parse-resume', { mimeType: file.type, dataBase64 })
 
-    if (!response.ok) {
-      throw new Error(`Resume parser request failed with status ${response.status}`)
+    return {
+      contact: { fullName: data.name, email: data.email, phone: data.phone, university: data.university },
+      major: data.major,
+      gradYear: data.gradYear,
+      skills: data.skills,
+      interests: data.interests,
     }
-
-    return (await response.json()) as ParsedResume
   } catch (error) {
-    console.warn('Resume parser unavailable, using demo data:', error)
+    console.warn('Resume parsing unavailable, using demo data:', error)
     return mockParseResume(file)
   }
 }
+
+type RankedCompany = Omit<Company, 'id' | 'x' | 'y'>
 
 export async function analyzeFair(
   rawText: string,
@@ -65,21 +74,32 @@ export async function analyzeFair(
     const file = companyListFile
       ? { mimeType: companyListFile.type, dataBase64: await fileToBase64(companyListFile) }
       : null
-    const ranked = await callGemini<AiCompanyMatch[]>('analyzeFair', { rawText, file, profile })
-    return ranked.map((company, index) => {
-      const { x, y } = boothCoordinatesForIndex(index, ranked.length)
+
+    const { booths } = await callApi<{ booths: Booth[] }>('/api/parse-directory', { rawText, file })
+    const { rankedCompanies } = await callApi<{ rankedCompanies: RankedCompany[] }>('/api/rank-companies', {
+      profile,
+      booths,
+    })
+
+    return rankedCompanies.map((company, index) => {
+      const { x, y } = boothCoordinatesForIndex(index, rankedCompanies.length)
       return {
         ...company,
-        id: `company-${index}-${company.name.replace(/\s+/g, '-').toLowerCase()}`,
-        boothNumber: company.boothNumber.trim() || String(index + 1).padStart(2, '0'),
+        id: `company-${index}-${company.companyName.replace(/\s+/g, '-').toLowerCase()}`,
         x,
         y,
       }
     })
   } catch (error) {
-    console.warn('Gemini company matching unavailable, using demo data:', error)
+    console.warn('Company matching unavailable, using demo data:', error)
     return mockAnalyzeFair(rawText, companyListFile?.name ?? null, profile)
   }
+}
+
+interface PitchResult {
+  companyName: string
+  elevatorPitch: string
+  questions: string[]
 }
 
 /**
@@ -92,14 +112,24 @@ export async function generatePreps(
   companies: Company[],
 ): Promise<Record<string, CompanyPrep>> {
   try {
-    const results = await callGemini<CompanyPrep[]>('generatePreps', { profile, companies })
+    const { pitches } = await callApi<{ pitches: PitchResult[] }>('/api/generate-pitches', {
+      profile,
+      companies: companies.map(({ companyName, boothNumber, summary, openRoles }) => ({
+        companyName,
+        boothNumber,
+        summary,
+        openRoles,
+      })),
+    })
+
     const prep: Record<string, CompanyPrep> = {}
     companies.forEach((company, index) => {
-      prep[company.id] = results[index]
+      const result = pitches[index]
+      prep[company.id] = { elevatorPitch: result.elevatorPitch, questions: result.questions }
     })
     return prep
   } catch (error) {
-    console.warn('Gemini pitch generation unavailable, using demo data:', error)
+    console.warn('Pitch generation unavailable, using demo data:', error)
     const prep: Record<string, CompanyPrep> = {}
     for (const company of companies) {
       prep[company.id] = mockGeneratePrep(profile, company)

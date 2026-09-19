@@ -21,7 +21,14 @@ type Action =
   | { type: 'GO_TO_STEP'; step: number }
   | { type: 'RESUME_FILE_SELECTED'; fileName: string }
   | { type: 'RESUME_PARSING' }
-  | { type: 'RESUME_PARSED'; contact: ContactInfo; skills: string[] }
+  | {
+      type: 'RESUME_PARSED'
+      contact: ContactInfo
+      major: string
+      gradYear: string
+      skills: string[]
+      interests: string[]
+    }
   | { type: 'SET_TARGET_POSITION'; position: TargetPosition }
   | { type: 'SET_PROFILE_FIELD'; field: 'major' | 'gradYear'; value: string }
   | { type: 'SET_EXPERIENCE_LEVEL'; value: ExperienceLevel }
@@ -63,7 +70,13 @@ function reducer(state: WizardState, action: Action): WizardState {
           contact: action.contact,
           extractedSkills: action.skills,
         },
-        profile: { ...state.profile, skills: action.skills },
+        profile: {
+          ...state.profile,
+          major: action.major || state.profile.major,
+          gradYear: action.gradYear || state.profile.gradYear,
+          skills: action.skills,
+          interests: action.interests,
+        },
       }
     case 'SET_TARGET_POSITION':
       return { ...state, resume: { ...state.resume, targetPosition: action.position } }

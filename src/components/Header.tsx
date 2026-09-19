@@ -11,7 +11,7 @@ interface HeaderProps {
 export function Header({ step, stepLabel, onBack }: HeaderProps) {
   return (
     <header className="sticky top-0 z-20 border-b border-border bg-background/95 backdrop-blur">
-      <div className="mx-auto flex max-w-md items-center justify-between gap-3 px-4 pt-4">
+      <div className="mx-auto flex max-w-md items-center justify-between gap-3 px-4 pt-4 md:max-w-5xl md:px-8">
         <div className="flex min-w-0 items-center gap-1.5">
           {onBack && (
             <button
@@ -23,13 +23,18 @@ export function Header({ step, stepLabel, onBack }: HeaderProps) {
               <CaretLeft size={18} weight="bold" aria-hidden="true" />
             </button>
           )}
-          <h1 className="truncate text-lg font-bold tracking-tight text-foreground">FairNav</h1>
+          <h1 className="truncate text-lg font-bold tracking-tight text-foreground">
+            FairNav <span className="text-primary">•</span>
+          </h1>
+          <span className="hidden text-sm font-medium text-muted-foreground md:ml-3 md:inline">
+            {stepLabel} · Step {step} of {TOTAL_STEPS}
+          </span>
         </div>
         <ThemeToggle />
       </div>
 
-      <div className="mx-auto max-w-md px-4 pb-3 pt-2.5">
-        <div className="mb-1.5 flex items-center justify-between text-xs font-medium text-muted-foreground">
+      <div className="mx-auto max-w-md px-4 pb-3 pt-2.5 md:max-w-5xl md:px-8">
+        <div className="mb-1.5 flex items-center justify-between text-xs font-medium text-muted-foreground md:hidden">
           <span>{stepLabel}</span>
           <span>
             Step {step} of {TOTAL_STEPS}

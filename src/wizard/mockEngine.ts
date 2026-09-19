@@ -5,6 +5,15 @@ import type {
   ProfileData,
 } from './types'
 
+const MAJOR_POOL = [
+  'Computer Science',
+  'Mechanical Engineering',
+  'Electrical Engineering',
+  'Data Science',
+  'Industrial Engineering',
+  'Business Administration',
+]
+
 /**
  * DEMO MODE.
  * Everything in this file simulates the resume parsing / company matching /
@@ -78,10 +87,13 @@ export function fakeDelay(ms: number) {
 
 export interface ParsedResume {
   contact: ContactInfo
+  major: string
+  gradYear: string
   skills: string[]
+  interests: string[]
 }
 
-/** Simulates extracting contact info + skills from an uploaded PDF/DOCX. */
+/** Simulates extracting contact info, skills, and interests from an uploaded PDF/DOCX. */
 export async function mockParseResume(file: File): Promise<ParsedResume> {
   await fakeDelay(1600)
   const baseName = file.name.replace(/\.(pdf|docx)$/i, '').replace(/[_-]/g, ' ')
@@ -96,7 +108,10 @@ export async function mockParseResume(file: File): Promise<ParsedResume> {
       phone: `(${randomDigits(3)}) ${randomDigits(3)}-${randomDigits(4)}`,
       university: randomFrom(UNIVERSITY_POOL),
     },
+    major: randomFrom(MAJOR_POOL),
+    gradYear: String(2026 + Math.floor(Math.random() * 4)),
     skills: pickRandom(SKILL_POOL, 5),
+    interests: pickRandom(INTEREST_POOL, 3),
   }
 }
 
@@ -243,7 +258,7 @@ export function buildCompanyDirectory(rawText: string, fileName: string | null):
   })
 }
 
-/** Simulates the "analyze fair + match companies" step. */
+/** Simulates the "parse directory + rank companies" steps combined. */
 export async function mockAnalyzeFair(
   rawText: string,
   fileName: string | null,
@@ -256,20 +271,18 @@ export async function mockAnalyzeFair(
     const { x, y } = boothCoordinatesForIndex(index, templates.length)
     return {
       id: `company-${index}-${template.name.replace(/\s+/g, '-').toLowerCase()}`,
-      name: template.name,
+      companyName: template.name,
       boothNumber: String(index + 1).padStart(2, '0'),
-      overview: template.overview,
+      summary: template.overview,
       openRoles: template.openRoles,
-      skillTags: template.skillTags,
-      industry: template.industry,
       x,
       y,
-      matchPercent: computeMatchPercent(profile, template),
+      matchScore: computeMatchScore(profile, template),
     }
-  }).sort((a, b) => b.matchPercent - a.matchPercent)
+  }).sort((a, b) => b.matchScore - a.matchScore)
 }
 
-function computeMatchPercent(profile: ProfileData, template: CompanyTemplate): number {
+function computeMatchScore(profile: ProfileData, template: CompanyTemplate): number {
   const profileTags = new Set([...profile.skills, ...profile.interests].map((s) => s.toLowerCase()))
   const companyTags = new Set([
     ...template.skillTags,
@@ -288,24 +301,16 @@ function computeMatchPercent(profile: ProfileData, template: CompanyTemplate): n
 
 /** Simulates generating a personalized elevator pitch + follow-up questions. */
 export function mockGeneratePrep(profile: ProfileData, company: Company): CompanyPrep {
-  const sharedSkills = profile.skills.filter((skill) =>
-    company.skillTags.some((tag) => tag.toLowerCase() === skill.toLowerCase()),
-  )
-  const anchorSkill = sharedSkills[0] ?? profile.skills[0] ?? 'hands-on project work'
-  const secondSkill = sharedSkills[1] ?? profile.skills[1] ?? 'cross-functional teamwork'
+  const anchorSkill = profile.skills[0] ?? 'hands-on project work'
+  const secondSkill = profile.skills[1] ?? 'cross-functional teamwork'
+  const interestAnchor = profile.interests[0] ?? 'this space'
 
-  const talkingPoints = [
-    `My background in ${anchorSkill} lines up directly with ${company.name}'s work in ${company.industry.toLowerCase()} — I'd point to a project where I used it end to end.`,
-    `I've also worked with ${secondSkill}, which maps to the ${company.openRoles[0] ?? 'open role'} you're hiring for.`,
-    `As a ${profile.major || 'student'} graduating ${profile.gradYear || 'soon'}, I'm looking for a team where I can grow past ${profile.experienceLevel.replace('-', ' ')}.`,
-  ]
-
-  const interestAnchor = profile.interests[0] ?? company.industry
+  const elevatorPitch = `My background in ${anchorSkill} lines up well with what ${company.companyName} is doing — ${company.summary} I've also worked with ${secondSkill}, which maps to the ${company.openRoles[0] ?? 'open role'} you're hiring for, and as a ${profile.major || 'student'} graduating ${profile.gradYear || 'soon'}, I'm looking for a team where I can keep growing in ${interestAnchor.toLowerCase()}.`
 
   const questions = [
     `What does a strong first 90 days look like for someone in the ${company.openRoles[0] ?? 'open'} role?`,
-    `How does ${company.name} support people moving deeper into ${interestAnchor.toLowerCase()}?`,
+    `How does ${company.companyName} support people moving deeper into ${interestAnchor.toLowerCase()}?`,
   ]
 
-  return { talkingPoints, questions }
+  return { elevatorPitch, questions }
 }
