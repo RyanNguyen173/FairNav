@@ -398,6 +398,27 @@ function sanitizeEducation(value: unknown): Education[] {
 }
 
 /**
+ * Guards against a saved Company from before class-standing eligibility
+ * (acceptedStandings/citizenshipRequirement) existed - those fields would
+ * simply be missing (`undefined`, not an empty array/string) on old saved
+ * data, and code like `company.acceptedStandings.length` throws on that
+ * rather than treating it as "not stated."
+ */
+function sanitizeCompanies(value: unknown): Company[] {
+  if (!Array.isArray(value)) return []
+  return value
+    .filter(
+      (item): item is Company =>
+        typeof item === 'object' && item !== null && typeof (item as Company).id === 'string' && typeof (item as Company).companyName === 'string',
+    )
+    .map((item) => ({
+      ...item,
+      acceptedStandings: Array.isArray(item.acceptedStandings) ? item.acceptedStandings : [],
+      citizenshipRequirement: typeof item.citizenshipRequirement === 'string' ? item.citizenshipRequirement : '',
+    }))
+}
+
+/**
  * Migrates a saved WizardState from before multi-fair support - it used to
  * hold a single top-level fair/companies/selectedCompanyIds/prep/fairMode
  * instead of a fairProfiles array - into the new shape, preserving whatever
@@ -408,10 +429,14 @@ function migrateFairProfiles(
   initialState: Partial<WizardState> & Record<string, unknown>,
 ): { fairProfiles: FairProfile[]; activeFairId: string | null } {
   if (Array.isArray(initialState.fairProfiles) && initialState.fairProfiles.length > 0) {
-    const fairProfiles = initialState.fairProfiles.filter(
-      (item): item is FairProfile =>
-        typeof item === 'object' && item !== null && typeof (item as FairProfile).id === 'string',
-    )
+    const fairProfiles = initialState.fairProfiles
+      .filter(
+        (item): item is FairProfile =>
+          typeof item === 'object' && item !== null && typeof (item as FairProfile).id === 'string',
+      )
+      // A fairProfiles array can itself predate a later schema change (e.g.
+      // class-standing eligibility) even though the array shape is current.
+      .map((fair) => ({ ...fair, companies: sanitizeCompanies(fair.companies) }))
     if (fairProfiles.length > 0) {
       const activeFairId =
         typeof initialState.activeFairId === 'string' &&
@@ -446,7 +471,7 @@ function migrateFairProfiles(
       companyListFileName: legacyFair.companyListFileName ?? null,
       companyDirectoryText: legacyFair.companyDirectoryText ?? '',
       ingestStatus: legacyFair.status ?? 'idle',
-      companies: Array.isArray(initialState.companies) ? (initialState.companies as Company[]) : [],
+      companies: sanitizeCompanies(initialState.companies),
       selectedCompanyIds: Array.isArray(initialState.selectedCompanyIds)
         ? (initialState.selectedCompanyIds as string[])
         : [],
