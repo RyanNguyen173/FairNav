@@ -8,15 +8,21 @@ import type { FairProfile, FairStatus, TargetPosition } from '../wizard/types'
 import { useWizard } from '../wizard/WizardContext'
 
 const STATUS_LABEL: Record<FairStatus, string> = {
-  draft: 'Draft',
   'in-progress': 'In Progress',
   completed: 'Completed',
 }
 
 const STATUS_CLASS: Record<FairStatus, string> = {
-  draft: 'bg-muted text-muted-foreground',
   'in-progress': 'bg-secondary text-on-secondary',
   completed: 'bg-success text-on-success',
+}
+
+/** In progress from the moment a fair is created; completed once every selected company has been visited. */
+function computeFairStatus(fair: FairProfile): FairStatus {
+  const visitedAll =
+    fair.selectedCompanyIds.length > 0 &&
+    fair.selectedCompanyIds.every((id) => fair.fairMode.companyState[id]?.visited)
+  return visitedAll ? 'completed' : 'in-progress'
 }
 
 function CreateFairModal({
@@ -121,12 +127,14 @@ function FairCard({ fair }: { fair: FairProfile }) {
     }
   }
 
+  const status = computeFairStatus(fair)
+
   return (
     <div className="rounded-2xl border border-border bg-card p-4">
       <div className="mb-2 flex items-start justify-between gap-2">
         <h3 className="text-[15px] font-bold text-card-foreground">{fair.name || 'Untitled fair'}</h3>
-        <span className={['shrink-0 rounded-full px-2.5 py-1 text-xs font-bold', STATUS_CLASS[fair.status]].join(' ')}>
-          {STATUS_LABEL[fair.status]}
+        <span className={['shrink-0 rounded-full px-2.5 py-1 text-xs font-bold', STATUS_CLASS[status]].join(' ')}>
+          {STATUS_LABEL[status]}
         </span>
       </div>
 

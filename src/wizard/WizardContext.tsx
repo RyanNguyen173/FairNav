@@ -257,7 +257,6 @@ function reducer(state: WizardState, action: Action): WizardState {
       return updateActiveFair(state, (fair) => ({
         ...fair,
         ingestStatus: 'done',
-        status: fair.status === 'draft' ? 'in-progress' : fair.status,
         companies: action.companies,
       }))
 
@@ -297,7 +296,6 @@ function reducer(state: WizardState, action: Action): WizardState {
       return updateActiveFair(state, (fair) => ({
         ...fair,
         fairMode: { ...fair.fairMode, active: false },
-        status: 'completed',
       }))
 
     case 'MARK_VISITED':
@@ -410,7 +408,6 @@ function migrateFairProfiles(
       location: legacyFair.location ?? '',
       targetPosition:
         (initialState.resume as { targetPosition?: TargetPosition } | undefined)?.targetPosition ?? 'internship',
-      status: 'draft',
       mapFileName: legacyFair.mapFileName ?? null,
       companyListFileName: legacyFair.companyListFileName ?? null,
       companyDirectoryText: legacyFair.companyDirectoryText ?? '',

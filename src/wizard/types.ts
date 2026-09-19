@@ -80,8 +80,14 @@ export interface FairModeCompanyState {
   visitedAt: number | null
 }
 
-/** Draft: created but no companies matched yet. In progress: matched, not yet fully worked. Completed: fair mode was entered and exited. */
-export type FairStatus = 'draft' | 'in-progress' | 'completed'
+/**
+ * Not stored - derived from live data wherever it's shown (see
+ * computeFairStatus in src/home/FairBoard.tsx) so it can never drift out of
+ * sync with the fair's actual progress. In progress: the default, from the
+ * moment a fair is created. Completed: every selected company has been
+ * marked visited.
+ */
+export type FairStatus = 'in-progress' | 'completed'
 
 /**
  * One saved career fair a student is (or was) preparing for - their own
@@ -95,7 +101,6 @@ export interface FairProfile {
   date: string
   location: string
   targetPosition: TargetPosition
-  status: FairStatus
   mapFileName: string | null
   companyListFileName: string | null
   companyDirectoryText: string
@@ -131,7 +136,6 @@ export function createFairProfile(overrides: {
     date: overrides.date ?? '',
     location: overrides.location ?? '',
     targetPosition: overrides.targetPosition ?? 'internship',
-    status: 'draft',
     mapFileName: null,
     companyListFileName: null,
     companyDirectoryText: '',
