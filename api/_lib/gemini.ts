@@ -1,4 +1,4 @@
-import { ApiError, GoogleGenAI } from '@google/genai'
+import { ApiError, GoogleGenAI, ThinkingLevel } from '@google/genai'
 import type { GenerateContentParameters } from '@google/genai'
 import type { ProfileData } from '../../src/wizard/types'
 
@@ -36,11 +36,14 @@ export async function generateWithRetry(ai: GoogleGenAI, params: GenerateContent
   // extraction/classification against a fixed schema. Gemini's "thinking"
   // models otherwise spend a variable, model-chosen amount of extra time
   // reasoning before responding, which is the main source of latency for a
-  // "flash-lite" model that's supposed to be fast. A caller can still opt
-  // back into it by passing its own thinkingConfig.
+  // "flash-lite" model that's supposed to be fast. Gemini 3.x models (which
+  // gemini-3.5-flash-lite is) configure this via the `thinkingLevel` enum,
+  // not the numeric `thinkingBudget` older Gemini 2.5 models use - sending
+  // thinkingBudget here 400s with INVALID_ARGUMENT. A caller can still opt
+  // back into more thinking by passing its own thinkingConfig.
   const requestParams: GenerateContentParameters = {
     ...params,
-    config: { thinkingConfig: { thinkingBudget: 0 }, ...params.config },
+    config: { thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL }, ...params.config },
   }
 
   for (let attempt = 1; attempt <= attempts; attempt++) {
