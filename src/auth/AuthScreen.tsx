@@ -1,9 +1,11 @@
 import { CheckCircle, LockKey } from '@phosphor-icons/react'
 import { useState } from 'react'
 import { Button } from '../components/Button'
+import { PasswordChecklist } from '../components/PasswordChecklist'
 import { FieldLabel, TextInput } from '../components/StepShell'
 import { ThemeToggle } from '../components/ThemeToggle'
 import { useAuth } from './AuthContext'
+import { isPasswordValid } from './passwordRules'
 
 type Mode = 'signin' | 'signup'
 
@@ -12,19 +14,6 @@ const FEATURES = [
   'AI-generated elevator pitches, tailored per company',
   'A live booth-by-booth route for the day of the fair',
 ]
-
-function getPasswordStrength(password: string) {
-  let score = 0
-  if (password.length >= 8) score++
-  if (password.length >= 12) score++
-  if (/[A-Z]/.test(password) && /[a-z]/.test(password)) score++
-  if (/\d/.test(password)) score++
-  if (/[^A-Za-z0-9]/.test(password)) score++
-  const clamped = Math.min(score, 4)
-  const labels = ['Very weak', 'Weak', 'Fair', 'Good', 'Strong']
-  const colors = ['bg-destructive', 'bg-destructive', 'bg-accent', 'bg-secondary', 'bg-success']
-  return { score: clamped, label: labels[clamped], color: colors[clamped] }
-}
 
 function UnlockPrompt() {
   const { unlockWithPassword, error, clearError, signOut } = useAuth()
@@ -103,12 +92,11 @@ export function AuthScreen() {
     return <UnlockPrompt />
   }
 
-  const strength = getPasswordStrength(password)
   const confirmMismatch = mode === 'signup' && confirmPassword.length > 0 && password !== confirmPassword
   const canSubmit =
     mode === 'signin'
       ? email.length > 3 && password.length > 0
-      : email.length > 3 && password.length >= 8 && password === confirmPassword
+      : email.length > 3 && isPasswordValid(password) && password === confirmPassword
 
   const handleSubmit = async () => {
     if (!canSubmit || submitting) return
@@ -196,22 +184,7 @@ export function AuthScreen() {
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
               />
-              {mode === 'signup' && password.length > 0 && (
-                <div className="mt-1.5">
-                  <div className="flex gap-1">
-                    {[0, 1, 2, 3].map((segment) => (
-                      <span
-                        key={segment}
-                        className={[
-                          'h-1 flex-1 rounded-full transition-colors duration-200',
-                          segment <= strength.score - 1 ? strength.color : 'bg-muted',
-                        ].join(' ')}
-                      />
-                    ))}
-                  </div>
-                  <p className="mt-1 text-xs text-muted-foreground">{strength.label}</p>
-                </div>
-              )}
+              {mode === 'signup' && password.length > 0 && <PasswordChecklist password={password} />}
             </div>
 
             {mode === 'signup' && (

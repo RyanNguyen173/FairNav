@@ -1,6 +1,6 @@
 import { Type } from '@google/genai'
 import type { NextRequest } from 'next/server'
-import { MODEL, describeProfile, generateWithRetry, withGeminiHandler } from '../../../src/lib/gemini'
+import { MODEL, describeProfile, describeVoice, generateWithRetry, withGeminiHandler } from '../../../src/lib/gemini'
 import type { ProfileData } from '../../../src/wizard/types'
 
 export const maxDuration = 60
@@ -29,6 +29,11 @@ export async function POST(request: NextRequest) {
 
 Student profile:
 ${describeProfile(profile)}
+
+Voice/tone to write in:
+${describeVoice(profile)}
+
+Write every pitch the way this specific student would actually say it out loud, not generic corporate copy. Never use hollow buzzwords or jargon like "synergy," "spearhead," "passionate about driving results," "boasts an impressive," "leverage," or "dynamic team player." Use direct first-person framing ("I built...", "I've been working on...") and natural spoken rhythm - contractions, short sentences, the kind of thing a real person says when introducing themselves, not a LinkedIn summary.
 
 Companies, in order:
 ${companyList}

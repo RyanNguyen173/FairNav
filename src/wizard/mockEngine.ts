@@ -1,4 +1,5 @@
 import type {
+  AcademicStanding,
   Company,
   CompanyPrep,
   ContactInfo,
@@ -358,6 +359,8 @@ interface CompanyTemplate {
   skillTags: string[]
   openRoles: string[]
   overview: string
+  acceptedStandings: AcademicStanding[]
+  citizenshipRequirement: string
 }
 
 const DEMO_COMPANY_POOL: CompanyTemplate[] = [
@@ -367,6 +370,8 @@ const DEMO_COMPANY_POOL: CompanyTemplate[] = [
     skillTags: ['Python', 'SQL', 'Machine Learning', 'Data Analysis'],
     openRoles: ['Data Analyst Intern', 'ML Engineer I'],
     overview: 'Builds forecasting tools for logistics and supply chain teams.',
+    acceptedStandings: ['Sophomore', 'Junior', 'Senior'],
+    citizenshipRequirement: '',
   },
   {
     name: 'Cascade Health Collective',
@@ -374,6 +379,8 @@ const DEMO_COMPANY_POOL: CompanyTemplate[] = [
     skillTags: ['Data Analysis', 'Public Speaking', 'Project Management'],
     openRoles: ['Program Analyst', 'Community Health Fellow'],
     overview: 'Nonprofit expanding access to preventive care in underserved counties.',
+    acceptedStandings: ['Freshman', 'Sophomore', 'Junior', 'Senior', 'Graduate'],
+    citizenshipRequirement: '',
   },
   {
     name: 'Fablink Robotics',
@@ -381,6 +388,8 @@ const DEMO_COMPANY_POOL: CompanyTemplate[] = [
     skillTags: ['CAD', 'C++', 'Circuit Design'],
     openRoles: ['Hardware Engineering Intern', 'Firmware Engineer I'],
     overview: 'Designs modular robotic arms for small manufacturing lines.',
+    acceptedStandings: ['Junior', 'Senior'],
+    citizenshipRequirement: 'US Citizenship required (export-controlled hardware).',
   },
   {
     name: 'Brightloop',
@@ -388,6 +397,8 @@ const DEMO_COMPANY_POOL: CompanyTemplate[] = [
     skillTags: ['React', 'Python', 'SQL'],
     openRoles: ['Software Engineer Intern', 'Full-Stack Engineer I'],
     overview: 'B2B scheduling platform used by 4,000+ small clinics.',
+    acceptedStandings: ['Sophomore', 'Junior', 'Senior'],
+    citizenshipRequirement: '',
   },
   {
     name: 'Verdant Finance',
@@ -395,6 +406,8 @@ const DEMO_COMPANY_POOL: CompanyTemplate[] = [
     skillTags: ['Excel Modeling', 'Data Analysis', 'Project Management'],
     openRoles: ['Finance Rotational Intern', 'Associate Analyst'],
     overview: 'Impact-investing firm funding climate-resilient infrastructure.',
+    acceptedStandings: ['Junior', 'Senior', 'Graduate'],
+    citizenshipRequirement: '',
   },
   {
     name: 'Studio Halcyon',
@@ -402,6 +415,8 @@ const DEMO_COMPANY_POOL: CompanyTemplate[] = [
     skillTags: ['Figma', 'UX Research', 'React'],
     openRoles: ['Product Design Intern', 'UX Researcher I'],
     overview: 'Design consultancy for civic and accessibility-first products.',
+    acceptedStandings: ['Freshman', 'Sophomore', 'Junior', 'Senior'],
+    citizenshipRequirement: '',
   },
   {
     name: 'Kestrel Aerospace',
@@ -409,6 +424,8 @@ const DEMO_COMPANY_POOL: CompanyTemplate[] = [
     skillTags: ['CAD', 'Circuit Design', 'C++'],
     openRoles: ['Systems Engineering Intern', 'Avionics Engineer I'],
     overview: 'Small-satellite components for university and commercial launches.',
+    acceptedStandings: ['Junior', 'Senior', 'Graduate'],
+    citizenshipRequirement: 'US Citizenship required for ITAR-controlled roles.',
   },
   {
     name: 'Openhand Foundation',
@@ -416,6 +433,8 @@ const DEMO_COMPANY_POOL: CompanyTemplate[] = [
     skillTags: ['Public Speaking', 'Project Management', 'Salesforce'],
     openRoles: ['Development Associate', 'Program Coordinator'],
     overview: 'Runs literacy and job-readiness programs in six U.S. cities.',
+    acceptedStandings: ['Freshman', 'Sophomore', 'Junior', 'Senior', 'Graduate'],
+    citizenshipRequirement: '',
   },
   {
     name: 'Marrow Labs',
@@ -423,6 +442,8 @@ const DEMO_COMPANY_POOL: CompanyTemplate[] = [
     skillTags: ['Machine Learning', 'Python', 'Data Analysis'],
     openRoles: ['ML Research Intern', 'Applied Scientist I'],
     overview: 'Early-stage startup building diagnostic imaging models.',
+    acceptedStandings: ['Senior', 'Graduate'],
+    citizenshipRequirement: '',
   },
   {
     name: 'Pinewell Consulting',
@@ -430,6 +451,8 @@ const DEMO_COMPANY_POOL: CompanyTemplate[] = [
     skillTags: ['Project Management', 'Excel Modeling', 'Public Speaking'],
     openRoles: ['Summer Associate', 'Business Analyst'],
     overview: 'Strategy consulting for mid-market healthcare and education clients.',
+    acceptedStandings: ['Junior', 'Senior'],
+    citizenshipRequirement: '',
   },
   {
     name: 'Glidepath Mobility',
@@ -437,6 +460,8 @@ const DEMO_COMPANY_POOL: CompanyTemplate[] = [
     skillTags: ['Java', 'SQL', 'Project Management'],
     openRoles: ['Software Engineer Intern', 'QA Engineer I'],
     overview: 'Builds accessible trip-planning software for transit agencies.',
+    acceptedStandings: ['Sophomore', 'Junior', 'Senior'],
+    citizenshipRequirement: '',
   },
   {
     name: 'Solace Financial',
@@ -444,6 +469,8 @@ const DEMO_COMPANY_POOL: CompanyTemplate[] = [
     skillTags: ['Excel Modeling', 'Salesforce', 'Data Analysis'],
     openRoles: ['Analyst Intern', 'Client Operations Associate'],
     overview: 'Fintech offering low-fee banking for gig and hourly workers.',
+    acceptedStandings: ['Junior', 'Senior', 'Graduate'],
+    citizenshipRequirement: '',
   },
 ]
 
@@ -500,6 +527,8 @@ export async function mockAnalyzeFair(
       x,
       y,
       matchScore: computeMatchScore(profile, template),
+      acceptedStandings: template.acceptedStandings,
+      citizenshipRequirement: template.citizenshipRequirement,
     }
   }).sort((a, b) => b.matchScore - a.matchScore)
 }

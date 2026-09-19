@@ -6,8 +6,17 @@ import { Chip } from '../components/Chip'
 import { Header } from '../components/Header'
 import { FieldLabel, SectionCard, StepShell, TextInput } from '../components/StepShell'
 import { INTEREST_POOL, SKILL_POOL } from '../wizard/mockEngine'
-import type { Education, WorkExperience } from '../wizard/types'
+import type { AcademicStanding, Education, SpeechStyle, WorkExperience } from '../wizard/types'
 import { useWizard } from '../wizard/WizardContext'
+
+const ACADEMIC_STANDING_OPTIONS: AcademicStanding[] = ['Freshman', 'Sophomore', 'Junior', 'Senior', 'Graduate']
+
+const SPEECH_STYLE_OPTIONS: { value: SpeechStyle; label: string }[] = [
+  { value: 'concise', label: 'Concise & Direct' },
+  { value: 'enthusiastic', label: 'Enthusiastic & Conversational' },
+  { value: 'technical', label: 'Highly Technical / Project-Focused' },
+  { value: 'custom', label: 'Custom Voice Input' },
+]
 
 /** Chip list + free-text input with a type-ahead dropdown of matching options. */
 function TagPicker({
@@ -362,6 +371,75 @@ export function Step2ProfileEditor() {
         <p className="mb-5 text-sm text-muted-foreground">
           Confirm your details, experience, and education so FairNav can rank the right companies for you.
         </p>
+
+        <SectionCard className="mb-6 space-y-4">
+          <div>
+            <FieldLabel htmlFor="academic-standing">Academic standing</FieldLabel>
+            <select
+              id="academic-standing"
+              value={profile.academicStanding}
+              onChange={(event) =>
+                dispatch({ type: 'SET_ACADEMIC_STANDING', value: event.target.value as AcademicStanding })
+              }
+              className="min-h-11 w-full max-w-sm rounded-xl border border-border bg-card px-3.5 text-[15px] text-card-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {ACADEMIC_STANDING_OPTIONS.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1.5 text-xs text-muted-foreground">
+              Used to flag which booths accept your class level once you match with companies.
+            </p>
+          </div>
+
+          <div>
+            <FieldLabel htmlFor="speech-style">Speaking style</FieldLabel>
+            <div
+              id="speech-style"
+              role="radiogroup"
+              aria-label="Speaking style"
+              className="grid grid-cols-2 gap-2 rounded-xl bg-muted p-1"
+            >
+              {SPEECH_STYLE_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  role="radio"
+                  aria-checked={profile.speechStyle === option.value}
+                  onClick={() => dispatch({ type: 'SET_SPEECH_STYLE', value: option.value })}
+                  className={[
+                    'min-h-11 cursor-pointer rounded-lg px-2 text-sm font-semibold transition-colors duration-150',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                    profile.speechStyle === option.value
+                      ? 'bg-card text-primary shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground',
+                  ].join(' ')}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <FieldLabel htmlFor="voice-sample">Custom voice sample (optional)</FieldLabel>
+            <textarea
+              id="voice-sample"
+              rows={2}
+              value={profile.voiceSample}
+              placeholder="Paste 1-2 sentences of how you naturally introduce yourself…"
+              onChange={(event) =>
+                dispatch({ type: 'SET_PROFILE_FIELD', field: 'voiceSample', value: event.target.value })
+              }
+              className="w-full rounded-xl border border-border bg-card px-3.5 py-2.5 text-[15px] text-card-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
+            <p className="mt-1.5 text-xs text-muted-foreground">
+              Helps your pitches sound like you instead of generic AI copy.
+            </p>
+          </div>
+        </SectionCard>
 
         <div className="md:grid md:grid-cols-2 md:items-start md:gap-8">
           <SectionCard className="mb-6 md:mb-0">

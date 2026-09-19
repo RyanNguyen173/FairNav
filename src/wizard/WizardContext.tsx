@@ -16,11 +16,13 @@ import {
   initialWizardState,
   STEP_ROUTES,
   TOTAL_STEPS,
+  type AcademicStanding,
   type Company,
   type CompanyPrep,
   type ContactInfo,
   type Education,
   type FairProfile,
+  type SpeechStyle,
   type TargetPosition,
   type WizardState,
   type WorkExperience,
@@ -44,7 +46,9 @@ type Action =
       education: Education[]
     }
   | { type: 'SET_TARGET_POSITION'; position: TargetPosition }
-  | { type: 'SET_PROFILE_FIELD'; field: 'major' | 'gradYear'; value: string }
+  | { type: 'SET_PROFILE_FIELD'; field: 'major' | 'gradYear' | 'voiceSample'; value: string }
+  | { type: 'SET_SPEECH_STYLE'; value: SpeechStyle }
+  | { type: 'SET_ACADEMIC_STANDING'; value: AcademicStanding }
   | { type: 'ADD_SKILL'; skill: string }
   | { type: 'REMOVE_SKILL'; skill: string }
   | { type: 'ADD_INTEREST'; interest: string }
@@ -121,6 +125,10 @@ function reducer(state: WizardState, action: Action): WizardState {
 
     case 'SET_PROFILE_FIELD':
       return { ...state, profile: { ...state.profile, [action.field]: action.value } }
+    case 'SET_SPEECH_STYLE':
+      return { ...state, profile: { ...state.profile, speechStyle: action.value } }
+    case 'SET_ACADEMIC_STANDING':
+      return { ...state, profile: { ...state.profile, academicStanding: action.value } }
     case 'ADD_SKILL':
       if (state.profile.skills.includes(action.skill)) return state
       return { ...state, profile: { ...state.profile, skills: [...state.profile.skills, action.skill] } }

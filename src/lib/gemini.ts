@@ -1,7 +1,7 @@
 import { ApiError, GoogleGenAI, ThinkingLevel } from '@google/genai'
 import type { GenerateContentParameters } from '@google/genai'
 import { NextResponse, type NextRequest } from 'next/server'
-import type { ProfileData } from '../wizard/types'
+import type { ProfileData, SpeechStyle } from '../wizard/types'
 
 /**
  * Shared helpers for the 4 Gemini-only route handlers
@@ -55,6 +55,22 @@ export function describeProfile(profile: ProfileData): string {
     `- Skills: ${profile.skills.join(', ') || 'None listed'}`,
     `- Interests: ${profile.interests.join(', ') || 'None listed'}`,
   ].join('\n')
+}
+
+const SPEECH_STYLE_DESCRIPTIONS: Record<SpeechStyle, string> = {
+  concise: 'Concise and direct - short sentences, no filler.',
+  enthusiastic: 'Enthusiastic and conversational - warm, natural energy.',
+  technical: 'Highly technical and project-focused - lead with specifics, not soft skills.',
+  custom: 'Match the tone of the voice sample below as closely as possible.',
+}
+
+/** Separate from describeProfile() since speaking style/voice only matters for pitch writing, not company ranking. */
+export function describeVoice(profile: ProfileData): string {
+  const lines = [`- Speaking style: ${SPEECH_STYLE_DESCRIPTIONS[profile.speechStyle]}`]
+  if (profile.voiceSample.trim()) {
+    lines.push(`- Voice sample to match (mimic this tone/rhythm/word choice): "${profile.voiceSample.trim()}"`)
+  }
+  return lines.join('\n')
 }
 
 /** Standard client init + error handling wrapper around a POST body's `payload`. */
