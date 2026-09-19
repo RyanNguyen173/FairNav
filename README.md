@@ -16,12 +16,25 @@ running under plain `vite dev`, rate limited — the app falls back to the
 original simulated data in `src/wizard/mockEngine.ts` so the wizard stays
 usable either way (a console warning notes when this happens).
 
-One follow-up is intentionally deferred and still open:
+Pitch generation for all selected companies happens in a single Gemini
+request rather than one request per company — fewer concurrent calls
+against the same API key/rate limit, which is both faster and less prone to
+transient "model overloaded" errors. Transient 503/429 responses from
+Gemini are retried once with backoff before giving up.
+
+Two follow-ups are intentionally deferred and still open:
 
 - **Six separate routes.** The app currently runs as a single-page wizard
   (one URL, step state held in memory). Splitting it into six deep-linkable
   routes (`/upload`, `/profile`, `/matches`, ...) with persisted step state
   is the next structural change.
+- **Booth map image isn't analyzed.** Step 3's "Booth map" upload (the
+  fair's physical layout image/PDF) is stored by name only and never read —
+  the route map's booth positions are a synthetic grid (`boothCoordinatesForIndex`
+  in `mockEngine.ts`), not the real layout. Feeding that image to Gemini's
+  vision input to place booths at real positions is a natural next step, but
+  adds another AI call (and more latency) per fair setup, so it's left as a
+  deliberate choice rather than bundled in silently.
 
 ## Stack
 
@@ -57,6 +70,12 @@ Note: resume files are base64-encoded and sent in the function's request
 body, which has a practical size ceiling well under the 10MB the UI mentions
 (Vercel functions cap request bodies around 4.5MB) — large resumes may need
 a signed-upload flow later.
+
+`vercel.json` sets `api/gemini.ts`'s `maxDuration` to 60s (Vercel's default
+is much shorter and calls that include a document, like resume or exhibitor
+PDF parsing, can take longer than that). If you're on a plan with a lower
+cap, Vercel will tell you at deploy time — lower the number in `vercel.json`
+to match.
 
 ## Project structure
 

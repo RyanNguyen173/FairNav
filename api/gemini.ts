@@ -1,4 +1,5 @@
-import { GoogleGenAI, Type, createPartFromBase64, createUserContent } from '@google/genai'
+import { ApiError, GoogleGenAI, Type, createPartFromBase64, createUserContent } from '@google/genai'
+import type { GenerateContentParameters } from '@google/genai'
 import type { Company, CompanyPrep, ProfileData } from '../src/wizard/types'
 
 /**
@@ -36,15 +37,33 @@ interface AnalyzeFairPayload {
   profile: ProfileData
 }
 
-interface GeneratePrepPayload {
+interface GeneratePrepsPayload {
   profile: ProfileData
-  company: Company
+  companies: Company[]
 }
 
 function getClient(): GoogleGenAI {
   const apiKey = process.env.GEMINI_API_KEY
   if (!apiKey) throw new Error('GEMINI_API_KEY is not configured')
   return new GoogleGenAI({ apiKey })
+}
+
+/**
+ * Gemini occasionally returns 503 (model overloaded) or 429 (rate limited)
+ * under load - both transient. Retry those with backoff; anything else
+ * (bad request, auth) fails immediately since retrying won't help.
+ */
+async function generateWithRetry(ai: GoogleGenAI, params: GenerateContentParameters, attempts = 2) {
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    try {
+      return await ai.models.generateContent(params)
+    } catch (error) {
+      const retryable = error instanceof ApiError && (error.status === 503 || error.status === 429)
+      if (!retryable || attempt === attempts) throw error
+      await new Promise((resolve) => setTimeout(resolve, 750 * attempt))
+    }
+  }
+  throw new Error('unreachable')
 }
 
 function describeProfile(profile: ProfileData): string {
@@ -62,7 +81,7 @@ async function parseResume(ai: GoogleGenAI, payload: ParseResumePayload) {
 
 Only include information that actually appears in the document. If a field is not present, use an empty string for that field - never invent placeholder values. List skills as short keywords or phrases (e.g. "Python", "Public Speaking"), deduplicated, most relevant first, at most 8.`
 
-  const response = await ai.models.generateContent({
+  const response = await generateWithRetry(ai, {
     model: MODEL,
     contents: createUserContent([
       prompt,
@@ -109,7 +128,7 @@ ${directoryInstruction}
 
 For each company, include its booth number if known (empty string if not), a one-sentence overview, 1-2 plausible open roles, 2-4 relevant skill tags, an industry label, and a matchPercent (0-100) reflecting how well it fits this student. Order the array from highest matchPercent to lowest.`
 
-  const response = await ai.models.generateContent({
+  const response = await generateWithRetry(ai, {
     model: MODEL,
     contents: payload.file
       ? createUserContent([prompt, createPartFromBase64(payload.file.dataBase64, payload.file.mimeType || 'application/pdf')])
@@ -138,39 +157,52 @@ For each company, include its booth number if known (empty string if not), a one
   return JSON.parse(response.text ?? '[]')
 }
 
-async function generatePrep(ai: GoogleGenAI, payload: GeneratePrepPayload): Promise<CompanyPrep> {
-  const { profile, company } = payload
-  const prompt = `A student is about to talk to a recruiter at a career fair booth. Write a short, personalized elevator pitch and a couple of smart questions to ask.
+/**
+ * One request for ALL selected companies rather than one request per
+ * company. Cuts N concurrent Gemini calls (which compete for the same rate
+ * limit and are the likeliest source of "model overloaded" 503s under
+ * normal use) down to 1, and returns results in the same order as the
+ * input so the caller can zip them back onto company ids by index.
+ */
+async function generatePreps(ai: GoogleGenAI, payload: GeneratePrepsPayload): Promise<CompanyPrep[]> {
+  const { profile, companies } = payload
+  const companyList = companies
+    .map(
+      (company, index) =>
+        `${index + 1}. ${company.name} - industry: ${company.industry}; overview: ${company.overview}; open roles: ${company.openRoles.join(', ')}; skill tags: ${company.skillTags.join(', ')}`,
+    )
+    .join('\n')
+
+  const prompt = `A student is about to walk a career fair floor and will talk to a recruiter at each of the following companies. For EACH one, write a short personalized elevator pitch and a couple of smart questions to ask, tailored to that specific company using the student's real background.
 
 Student profile:
 ${describeProfile(profile)}
 
-Company:
-- Name: ${company.name}
-- Industry: ${company.industry}
-- Overview: ${company.overview}
-- Open roles: ${company.openRoles.join(', ')}
-- Skill tags: ${company.skillTags.join(', ')}
+Companies, in order:
+${companyList}
 
-Write 3 talking points the student can use to connect their real background to this specific company, and 2 thoughtful questions to ask the recruiter that go beyond generic questions.`
+Respond with exactly ${companies.length} results, one per company, in the same order as listed above. For each: 3 talking points connecting the student's real background to that specific company, and 2 thoughtful questions to ask that recruiter that go beyond generic questions.`
 
-  const response = await ai.models.generateContent({
+  const response = await generateWithRetry(ai, {
     model: MODEL,
     contents: prompt,
     config: {
       responseMimeType: 'application/json',
       responseSchema: {
-        type: Type.OBJECT,
-        properties: {
-          talkingPoints: { type: Type.ARRAY, items: { type: Type.STRING } },
-          questions: { type: Type.ARRAY, items: { type: Type.STRING } },
+        type: Type.ARRAY,
+        items: {
+          type: Type.OBJECT,
+          properties: {
+            talkingPoints: { type: Type.ARRAY, items: { type: Type.STRING } },
+            questions: { type: Type.ARRAY, items: { type: Type.STRING } },
+          },
+          required: ['talkingPoints', 'questions'],
         },
-        required: ['talkingPoints', 'questions'],
       },
     },
   })
 
-  return JSON.parse(response.text ?? '{}')
+  return JSON.parse(response.text ?? '[]')
 }
 
 export default async function handler(req: Req, res: Res) {
@@ -191,8 +223,8 @@ export default async function handler(req: Req, res: Res) {
       case 'analyzeFair':
         res.status(200).json(await analyzeFair(ai, payload as AnalyzeFairPayload))
         return
-      case 'generatePrep':
-        res.status(200).json(await generatePrep(ai, payload as GeneratePrepPayload))
+      case 'generatePreps':
+        res.status(200).json(await generatePreps(ai, payload as GeneratePrepsPayload))
         return
       default:
         res.status(400).json({ error: 'Unknown action' })

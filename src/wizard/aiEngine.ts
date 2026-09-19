@@ -70,11 +70,28 @@ export async function analyzeFair(
   }
 }
 
-export async function generatePrep(profile: ProfileData, company: Company): Promise<CompanyPrep> {
+/**
+ * One request covering every selected company, rather than one request per
+ * company - fewer concurrent calls against the same API key, less latency,
+ * lower chance of hitting a transient rate limit / overload error.
+ */
+export async function generatePreps(
+  profile: ProfileData,
+  companies: Company[],
+): Promise<Record<string, CompanyPrep>> {
   try {
-    return await callGemini<CompanyPrep>('generatePrep', { profile, company })
+    const results = await callGemini<CompanyPrep[]>('generatePreps', { profile, companies })
+    const prep: Record<string, CompanyPrep> = {}
+    companies.forEach((company, index) => {
+      prep[company.id] = results[index]
+    })
+    return prep
   } catch (error) {
     console.warn('Gemini pitch generation unavailable, using demo data:', error)
-    return mockGeneratePrep(profile, company)
+    const prep: Record<string, CompanyPrep> = {}
+    for (const company of companies) {
+      prep[company.id] = mockGeneratePrep(profile, company)
+    }
+    return prep
   }
 }

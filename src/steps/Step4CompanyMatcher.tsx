@@ -3,8 +3,8 @@ import { useState } from 'react'
 import { Button } from '../components/Button'
 import { Header } from '../components/Header'
 import { StepShell } from '../components/StepShell'
-import { generatePrep } from '../wizard/aiEngine'
-import type { Company, CompanyPrep } from '../wizard/types'
+import { generatePreps } from '../wizard/aiEngine'
+import type { Company } from '../wizard/types'
 import { useWizard } from '../wizard/WizardContext'
 
 function MatchBadge({ percent }: { percent: number }) {
@@ -76,14 +76,7 @@ export function Step4CompanyMatcher() {
         .map((id) => companies.find((c) => c.id === id))
         .filter((company): company is Company => Boolean(company))
 
-      const results = await Promise.all(
-        selectedCompanies.map((company) => generatePrep(profile, company)),
-      )
-
-      const prep: Record<string, CompanyPrep> = {}
-      selectedCompanies.forEach((company, index) => {
-        prep[company.id] = results[index]
-      })
+      const prep = await generatePreps(profile, selectedCompanies)
 
       dispatch({ type: 'PREP_GENERATED', prep })
       goNext()
