@@ -10,12 +10,13 @@ export function Step3FairIngestion() {
   const { state, dispatch, goNext, goBack } = useWizard()
   const { fair, profile } = state
   const [directoryMode, setDirectoryMode] = useState<'paste' | 'upload'>('paste')
+  const [companyListFile, setCompanyListFile] = useState<File | null>(null)
 
   const canAnalyze = fair.eventName.trim().length > 0 && fair.status !== 'working'
 
   const handleAnalyze = async () => {
     dispatch({ type: 'FAIR_ANALYZING' })
-    const companies = await analyzeFair(fair.companyDirectoryText, fair.companyListFileName, profile)
+    const companies = await analyzeFair(fair.companyDirectoryText, companyListFile, profile)
     dispatch({ type: 'COMPANIES_MATCHED', companies })
     goNext()
   }
@@ -110,7 +111,10 @@ export function Step3FairIngestion() {
               helperText="PDF or CSV listing attending companies."
               accept=".pdf,.csv"
               fileName={fair.companyListFileName}
-              onFile={(file) => dispatch({ type: 'SET_COMPANY_LIST_FILE', fileName: file.name })}
+              onFile={(file) => {
+                setCompanyListFile(file)
+                dispatch({ type: 'SET_COMPANY_LIST_FILE', fileName: file.name })
+              }}
             />
           )}
         </div>

@@ -9,7 +9,7 @@ import type { Company, CompanyPrep, ProfileData } from './types'
  * etc.) so the wizard stays usable either way.
  */
 
-type AiCompanyMatch = Omit<Company, 'id' | 'boothNumber' | 'x' | 'y'>
+type AiCompanyMatch = Omit<Company, 'id' | 'x' | 'y'>
 
 async function callGemini<T>(action: string, payload: unknown): Promise<T> {
   const response = await fetch('/api/gemini', {
@@ -46,24 +46,27 @@ export async function parseResume(file: File): Promise<ParsedResume> {
 
 export async function analyzeFair(
   rawText: string,
-  fileName: string | null,
+  companyListFile: File | null,
   profile: ProfileData,
 ): Promise<Company[]> {
   try {
-    const ranked = await callGemini<AiCompanyMatch[]>('analyzeFair', { rawText, fileName, profile })
+    const file = companyListFile
+      ? { mimeType: companyListFile.type, dataBase64: await fileToBase64(companyListFile) }
+      : null
+    const ranked = await callGemini<AiCompanyMatch[]>('analyzeFair', { rawText, file, profile })
     return ranked.map((company, index) => {
       const { x, y } = boothCoordinatesForIndex(index, ranked.length)
       return {
         ...company,
         id: `company-${index}-${company.name.replace(/\s+/g, '-').toLowerCase()}`,
-        boothNumber: String(index + 1).padStart(2, '0'),
+        boothNumber: company.boothNumber.trim() || String(index + 1).padStart(2, '0'),
         x,
         y,
       }
     })
   } catch (error) {
     console.warn('Gemini company matching unavailable, using demo data:', error)
-    return mockAnalyzeFair(rawText, fileName, profile)
+    return mockAnalyzeFair(rawText, companyListFile?.name ?? null, profile)
   }
 }
 

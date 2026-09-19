@@ -23,7 +23,7 @@ interface Res {
 
 const MODEL = 'gemini-3.1-flash-lite'
 
-type AiCompanyMatch = Omit<Company, 'id' | 'boothNumber' | 'x' | 'y'>
+type AiCompanyMatch = Omit<Company, 'id' | 'x' | 'y'>
 
 interface ParseResumePayload {
   mimeType: string
@@ -32,7 +32,7 @@ interface ParseResumePayload {
 
 interface AnalyzeFairPayload {
   rawText: string
-  fileName: string | null
+  file: { mimeType: string; dataBase64: string } | null
   profile: ProfileData
 }
 
@@ -94,9 +94,11 @@ Only include information that actually appears in the document. If a field is no
 }
 
 async function analyzeFair(ai: GoogleGenAI, payload: AnalyzeFairPayload): Promise<AiCompanyMatch[]> {
-  const directoryInstruction = payload.rawText.trim()
-    ? `Here is the list of companies attending the fair (one per line):\n${payload.rawText}`
-    : 'No company directory was provided. Invent a realistic set of 8-10 companies that would plausibly attend a general career fair and would be a good fit for this student.'
+  const directoryInstruction = payload.file
+    ? 'Extract every exhibitor/company from the attached exhibitor directory document, including its booth number(s) exactly as printed (if a company lists multiple booth numbers, use the first one).'
+    : payload.rawText.trim()
+      ? `Here is the list of companies attending the fair (one per line):\n${payload.rawText}`
+      : 'No company directory was provided. Invent a realistic set of 8-10 companies that would plausibly attend a general career fair and would be a good fit for this student.'
 
   const prompt = `You are ranking companies at a career fair for a student, from best to worst fit.
 
@@ -105,11 +107,13 @@ ${describeProfile(payload.profile)}
 
 ${directoryInstruction}
 
-For each company, write a one-sentence overview, 1-2 plausible open roles, 2-4 relevant skill tags, an industry label, and a matchPercent (0-100) reflecting how well it fits this student. Order the array from highest matchPercent to lowest.`
+For each company, include its booth number if known (empty string if not), a one-sentence overview, 1-2 plausible open roles, 2-4 relevant skill tags, an industry label, and a matchPercent (0-100) reflecting how well it fits this student. Order the array from highest matchPercent to lowest.`
 
   const response = await ai.models.generateContent({
     model: MODEL,
-    contents: prompt,
+    contents: payload.file
+      ? createUserContent([prompt, createPartFromBase64(payload.file.dataBase64, payload.file.mimeType || 'application/pdf')])
+      : prompt,
     config: {
       responseMimeType: 'application/json',
       responseSchema: {
@@ -118,13 +122,14 @@ For each company, write a one-sentence overview, 1-2 plausible open roles, 2-4 r
           type: Type.OBJECT,
           properties: {
             name: { type: Type.STRING },
+            boothNumber: { type: Type.STRING },
             overview: { type: Type.STRING },
             openRoles: { type: Type.ARRAY, items: { type: Type.STRING } },
             skillTags: { type: Type.ARRAY, items: { type: Type.STRING } },
             industry: { type: Type.STRING },
             matchPercent: { type: Type.INTEGER },
           },
-          required: ['name', 'overview', 'openRoles', 'skillTags', 'industry', 'matchPercent'],
+          required: ['name', 'boothNumber', 'overview', 'openRoles', 'skillTags', 'industry', 'matchPercent'],
         },
       },
     },
