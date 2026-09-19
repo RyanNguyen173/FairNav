@@ -12,6 +12,7 @@ import { useAuth } from '../auth/AuthContext'
 import { encryptJSON } from '../lib/crypto'
 import { supabase } from '../lib/supabaseClient'
 import {
+  createFairProfile,
   initialWizardState,
   STEP_ROUTES,
   TOTAL_STEPS,
@@ -54,6 +55,10 @@ type Action =
   | { type: 'ADD_EDUCATION' }
   | { type: 'UPDATE_EDUCATION'; id: string; patch: Partial<Omit<Education, 'id'>> }
   | { type: 'REMOVE_EDUCATION'; id: string }
+  | { type: 'ADD_FAIR_PROFILE'; name: string; date: string; location: string; targetPosition: TargetPosition }
+  | { type: 'SET_ACTIVE_FAIR'; id: string }
+  | { type: 'DUPLICATE_FAIR_PROFILE'; id: string }
+  | { type: 'REMOVE_FAIR_PROFILE'; id: string }
   | { type: 'SET_FAIR_FIELD'; field: 'name' | 'date' | 'location'; value: string }
   | { type: 'SET_MAP_FILE'; fileName: string }
   | { type: 'SET_COMPANY_LIST_FILE'; fileName: string }
@@ -213,6 +218,45 @@ function reducer(state: WizardState, action: Action): WizardState {
         ...state,
         profile: { ...state.profile, education: state.profile.education.filter((e) => e.id !== action.id) },
       }
+
+    case 'ADD_FAIR_PROFILE': {
+      const fair = createFairProfile({
+        id: crypto.randomUUID(),
+        name: action.name,
+        date: action.date,
+        location: action.location,
+        targetPosition: action.targetPosition,
+      })
+      return { ...state, fairProfiles: [...state.fairProfiles, fair], activeFairId: fair.id }
+    }
+    case 'SET_ACTIVE_FAIR':
+      return state.fairProfiles.some((fair) => fair.id === action.id)
+        ? { ...state, activeFairId: action.id }
+        : state
+
+    case 'DUPLICATE_FAIR_PROFILE': {
+      const source = state.fairProfiles.find((fair) => fair.id === action.id)
+      if (!source) return state
+      const copy = createFairProfile({
+        id: crypto.randomUUID(),
+        name: `${source.name} (copy)`,
+        date: source.date,
+        location: source.location,
+        targetPosition: source.targetPosition,
+      })
+      return { ...state, fairProfiles: [...state.fairProfiles, copy], activeFairId: copy.id }
+    }
+
+    case 'REMOVE_FAIR_PROFILE': {
+      const remaining = state.fairProfiles.filter((fair) => fair.id !== action.id)
+      // useActiveFair() assumes at least one fair always exists - replace
+      // rather than allow the list to go empty.
+      const fairProfiles = remaining.length > 0 ? remaining : [createFairProfile({ id: crypto.randomUUID(), name: '' })]
+      const activeFairId = fairProfiles.some((fair) => fair.id === state.activeFairId)
+        ? state.activeFairId
+        : fairProfiles[0].id
+      return { ...state, fairProfiles, activeFairId }
+    }
 
     case 'SET_FAIR_FIELD':
       return updateActiveFair(state, (fair) => ({ ...fair, [action.field]: action.value }))

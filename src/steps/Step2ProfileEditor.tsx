@@ -1,4 +1,5 @@
 import { Plus, Trash } from '@phosphor-icons/react'
+import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { Button } from '../components/Button'
 import { Chip } from '../components/Chip'
@@ -340,15 +341,20 @@ function EducationEditor({ entries }: { entries: Education[] }) {
 }
 
 export function Step2ProfileEditor() {
-  const { state, dispatch, goNext, goBack } = useWizard()
+  const { state, dispatch, goBack } = useWizard()
+  const router = useRouter()
   const { profile } = state
+  const proceedToDashboard = () => {
+    dispatch({ type: 'GO_TO_STEP', step: 3 })
+    router.push('/dashboard')
+  }
 
   return (
     <>
       <Header step={2} stepLabel="Profile &amp; skills" onBack={goBack} />
       <StepShell
         footer={
-          <Button fullWidth onClick={goNext}>
+          <Button fullWidth onClick={proceedToDashboard}>
             Save Profile &amp; Proceed
           </Button>
         }

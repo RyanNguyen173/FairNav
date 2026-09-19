@@ -12,7 +12,12 @@ export default function Home() {
 
   useEffect(() => {
     const activeFair = state.fairProfiles.find((fair) => fair.id === state.activeFairId)
-    const target = activeFair?.fairMode.active ? STEP_ROUTES[6] : (STEP_ROUTES[state.step] ?? STEP_ROUTES[1])
+    // With more than one saved fair, land on the dashboard to pick one
+    // rather than silently resuming whichever happened to be active last.
+    const target =
+      state.step >= 3 && state.fairProfiles.length > 1
+        ? '/dashboard'
+        : (activeFair?.fairMode.active ? STEP_ROUTES[6] : (STEP_ROUTES[state.step] ?? STEP_ROUTES[1]))
     router.replace(target)
     // Intentionally one-time on mount - this redirects to wherever the user
     // left off, it shouldn't re-fire every time wizard state changes.

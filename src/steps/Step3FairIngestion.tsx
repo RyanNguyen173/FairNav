@@ -1,3 +1,4 @@
+import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { Button } from '../components/Button'
 import { Header } from '../components/Header'
@@ -7,7 +8,8 @@ import { analyzeFair } from '../wizard/aiEngine'
 import { useActiveFair, useWizard } from '../wizard/WizardContext'
 
 export function Step3FairIngestion() {
-  const { state, dispatch, goNext, goBack } = useWizard()
+  const { state, dispatch, goNext } = useWizard()
+  const router = useRouter()
   const { profile } = state
   const fair = useActiveFair()
   const [directoryMode, setDirectoryMode] = useState<'paste' | 'upload'>('paste')
@@ -24,7 +26,7 @@ export function Step3FairIngestion() {
 
   return (
     <>
-      <Header step={3} stepLabel="Fair details &amp; map" onBack={goBack} />
+      <Header step={3} stepLabel="Fair details &amp; map" onBack={() => router.push('/dashboard')} />
       <StepShell
         footer={
           <Button fullWidth disabled={!canAnalyze} loading={fair.ingestStatus === 'working'} onClick={handleAnalyze}>
