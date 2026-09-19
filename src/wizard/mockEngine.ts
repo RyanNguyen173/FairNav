@@ -210,7 +210,7 @@ const DEMO_COMPANY_POOL: CompanyTemplate[] = [
   },
 ]
 
-function boothCoordinatesForIndex(index: number, total: number) {
+export function boothCoordinatesForIndex(index: number, total: number) {
   const columns = Math.max(3, Math.ceil(Math.sqrt(total)))
   const row = Math.floor(index / columns)
   const col = index % columns

@@ -3,7 +3,7 @@ import { Button } from '../components/Button'
 import { Header } from '../components/Header'
 import { FieldLabel, SectionCard, StepShell, TextInput } from '../components/StepShell'
 import { UploadDropzone } from '../components/UploadDropzone'
-import { mockAnalyzeFair } from '../wizard/mockEngine'
+import { analyzeFair } from '../wizard/aiEngine'
 import { useWizard } from '../wizard/WizardContext'
 
 export function Step3FairIngestion() {
@@ -15,7 +15,7 @@ export function Step3FairIngestion() {
 
   const handleAnalyze = async () => {
     dispatch({ type: 'FAIR_ANALYZING' })
-    const companies = await mockAnalyzeFair(fair.companyDirectoryText, fair.companyListFileName, profile)
+    const companies = await analyzeFair(fair.companyDirectoryText, fair.companyListFileName, profile)
     dispatch({ type: 'COMPANIES_MATCHED', companies })
     goNext()
   }

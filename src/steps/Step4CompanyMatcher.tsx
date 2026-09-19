@@ -1,8 +1,9 @@
 import { MapPin } from '@phosphor-icons/react'
+import { useState } from 'react'
 import { Button } from '../components/Button'
 import { Header } from '../components/Header'
 import { StepShell } from '../components/StepShell'
-import { mockGeneratePrep } from '../wizard/mockEngine'
+import { generatePrep } from '../wizard/aiEngine'
 import type { Company, CompanyPrep } from '../wizard/types'
 import { useWizard } from '../wizard/WizardContext'
 
@@ -66,15 +67,29 @@ export function Step4CompanyMatcher() {
   const { state, dispatch, goNext, goBack } = useWizard()
   const { companies, selectedCompanyIds, profile } = state
   const selectedCount = selectedCompanyIds.length
+  const [isGenerating, setIsGenerating] = useState(false)
 
-  const handleGenerate = () => {
-    const prep: Record<string, CompanyPrep> = {}
-    for (const id of selectedCompanyIds) {
-      const company = companies.find((c) => c.id === id)
-      if (company) prep[id] = mockGeneratePrep(profile, company)
+  const handleGenerate = async () => {
+    setIsGenerating(true)
+    try {
+      const selectedCompanies = selectedCompanyIds
+        .map((id) => companies.find((c) => c.id === id))
+        .filter((company): company is Company => Boolean(company))
+
+      const results = await Promise.all(
+        selectedCompanies.map((company) => generatePrep(profile, company)),
+      )
+
+      const prep: Record<string, CompanyPrep> = {}
+      selectedCompanies.forEach((company, index) => {
+        prep[company.id] = results[index]
+      })
+
+      dispatch({ type: 'PREP_GENERATED', prep })
+      goNext()
+    } finally {
+      setIsGenerating(false)
     }
-    dispatch({ type: 'PREP_GENERATED', prep })
-    goNext()
   }
 
   return (
@@ -84,7 +99,12 @@ export function Step4CompanyMatcher() {
         footer={
           <div className="flex items-center gap-3">
             <span className="text-sm font-semibold text-foreground">{selectedCount} Selected</span>
-            <Button fullWidth disabled={selectedCount === 0} onClick={handleGenerate}>
+            <Button
+              fullWidth
+              disabled={selectedCount === 0 || isGenerating}
+              loading={isGenerating}
+              onClick={handleGenerate}
+            >
               Generate Preparation &amp; Route
             </Button>
           </div>
