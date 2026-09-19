@@ -2,6 +2,7 @@ import { CheckCircle, MapPin } from '@phosphor-icons/react'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { Button } from '../components/Button'
+import { FairSubNav } from '../components/FairSubNav'
 import { Header } from '../components/Header'
 import { StepShell } from '../components/StepShell'
 import { generatePreps } from '../wizard/aiEngine'
@@ -68,7 +69,8 @@ export function Step4CompanyMatcher() {
   const { state, dispatch } = useWizard()
   const router = useRouter()
   const { profile } = state
-  const { companies, selectedCompanyIds } = useActiveFair()
+  const fair = useActiveFair()
+  const { companies, selectedCompanyIds } = fair
   const selectedCount = selectedCompanyIds.length
   const [isGenerating, setIsGenerating] = useState(false)
 
@@ -101,6 +103,7 @@ export function Step4CompanyMatcher() {
   return (
     <>
       <Header title="Ranked companies" onBack={() => router.push('/fair')} />
+      <FairSubNav fair={fair} />
       <StepShell
         footer={
           <div className="flex items-center gap-3 md:hidden">

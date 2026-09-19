@@ -2,6 +2,7 @@ import { ChatCircleDots, Check, Copy, Lightbulb } from '@phosphor-icons/react'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { Button } from '../components/Button'
+import { FairSubNav } from '../components/FairSubNav'
 import { Header } from '../components/Header'
 import { SectionCard, StepShell } from '../components/StepShell'
 import { useActiveFair, useWizard } from '../wizard/WizardContext'
@@ -39,7 +40,8 @@ function CopyButton({ text }: { text: string }) {
 export function Step5CompanyBriefs() {
   const { dispatch } = useWizard()
   const router = useRouter()
-  const { companies, selectedCompanyIds, prep } = useActiveFair()
+  const fair = useActiveFair()
+  const { companies, selectedCompanyIds, prep } = fair
   const enterFairMode = () => {
     dispatch({ type: 'ENTER_FAIR_MODE' })
     router.push('/')
@@ -52,6 +54,7 @@ export function Step5CompanyBriefs() {
   return (
     <>
       <Header title="Briefs &amp; pitch prep" onBack={() => router.push('/matches')} />
+      <FairSubNav fair={fair} />
       <StepShell
         footer={
           <Button fullWidth onClick={enterFairMode}>

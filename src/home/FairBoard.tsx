@@ -1,4 +1,4 @@
-import { Buildings, CalendarBlank, CaretRight, Copy, MapPin, Plus, Trash } from '@phosphor-icons/react'
+import { Buildings, CalendarBlank, CaretRight, Copy, MapPin, PencilSimple, Plus, Trash } from '@phosphor-icons/react'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { Button } from '../components/Button'
@@ -127,6 +127,10 @@ function FairCard({ fair, onEnterFairDay }: { fair: FairProfile; onEnterFairDay:
       onEnterFairDay()
     }
   }
+  const handleEdit = () => {
+    dispatch({ type: 'SET_ACTIVE_FAIR', id: fair.id })
+    router.push('/fair')
+  }
   const handleDuplicate = () => dispatch({ type: 'DUPLICATE_FAIR_PROFILE', id: fair.id })
   const handleDelete = () => {
     if (window.confirm(`Delete "${fair.name || 'this fair'}"? This removes its matched companies and pitch prep.`)) {
@@ -170,30 +174,42 @@ function FairCard({ fair, onEnterFairDay }: { fair: FairProfile; onEnterFairDay:
         </span>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="mb-2 flex items-center gap-2">
         <Button
           variant="secondary"
           className="flex-1"
           icon={<CaretRight size={15} weight="bold" aria-hidden="true" />}
           onClick={handleResume}
         >
-          {fair.fairMode.active ? 'Go to Fair Day' : fair.status === 'draft' && fair.companies.length === 0 ? 'Start' : 'Resume'}
+          {fair.fairMode.active ? 'Fair Day' : fair.status === 'draft' && fair.companies.length === 0 ? 'Start' : 'Resume'}
         </Button>
+        <Button
+          variant="secondary"
+          className="flex-1"
+          icon={<PencilSimple size={15} weight="bold" aria-hidden="true" />}
+          onClick={handleEdit}
+        >
+          Edit
+        </Button>
+      </div>
+      <div className="flex items-center gap-2">
         <button
           type="button"
           onClick={handleDuplicate}
           aria-label={`Duplicate ${fair.name || 'this fair'}`}
-          className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-border text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="flex h-9 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-border text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          <Copy size={16} weight="bold" aria-hidden="true" />
+          <Copy size={14} weight="bold" aria-hidden="true" />
+          Duplicate
         </button>
         <button
           type="button"
           onClick={handleDelete}
           aria-label={`Delete ${fair.name || 'this fair'}`}
-          className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-border text-muted-foreground hover:bg-muted hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="flex h-9 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-border text-sm font-medium text-muted-foreground hover:bg-muted hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          <Trash size={16} weight="bold" aria-hidden="true" />
+          <Trash size={14} weight="bold" aria-hidden="true" />
+          Delete
         </button>
       </div>
     </div>

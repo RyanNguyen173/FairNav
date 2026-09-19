@@ -1,6 +1,7 @@
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { Button } from '../components/Button'
+import { FairSubNav } from '../components/FairSubNav'
 import { Header } from '../components/Header'
 import { FieldLabel, SectionCard, StepShell, TextInput } from '../components/StepShell'
 import { UploadDropzone } from '../components/UploadDropzone'
@@ -27,6 +28,7 @@ export function Step3FairIngestion() {
   return (
     <>
       <Header title="Fair details &amp; map" onBack={() => router.push('/')} />
+      <FairSubNav fair={fair} />
       <StepShell
         footer={
           <Button fullWidth disabled={!canAnalyze} loading={fair.ingestStatus === 'working'} onClick={handleAnalyze}>
