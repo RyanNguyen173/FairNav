@@ -43,6 +43,8 @@ interface ParseResumeResponse {
   gradYear: string
   skills: string[]
   interests: string[]
+  experience: string[]
+  leadership: string[]
 }
 
 export async function parseResume(file: File): Promise<ParsedResume> {
@@ -56,6 +58,8 @@ export async function parseResume(file: File): Promise<ParsedResume> {
       gradYear: data.gradYear,
       skills: data.skills,
       interests: data.interests,
+      experience: data.experience,
+      leadership: data.leadership,
     }
   } catch (error) {
     console.warn('Resume parsing unavailable, using demo data:', error)

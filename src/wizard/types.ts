@@ -23,6 +23,10 @@ export interface ProfileData {
   experienceLevel: ExperienceLevel
   skills: string[]
   interests: string[]
+  /** One line per role/internship/project, e.g. "Software Engineering Intern @ Acme (2024)". */
+  experience: string[]
+  /** One line per leadership/extracurricular role, e.g. "President, Robotics Club". */
+  leadership: string[]
 }
 
 export interface FairData {
@@ -96,6 +100,8 @@ export const initialWizardState: WizardState = {
     experienceLevel: 'some-experience',
     skills: [],
     interests: [],
+    experience: [],
+    leadership: [],
   },
   fair: {
     eventName: '',

@@ -35,6 +35,8 @@ type Action =
       gradYear: string
       skills: string[]
       interests: string[]
+      experience: string[]
+      leadership: string[]
     }
   | { type: 'SET_TARGET_POSITION'; position: TargetPosition }
   | { type: 'SET_PROFILE_FIELD'; field: 'major' | 'gradYear'; value: string }
@@ -83,6 +85,8 @@ function reducer(state: WizardState, action: Action): WizardState {
           gradYear: action.gradYear || state.profile.gradYear,
           skills: action.skills,
           interests: action.interests,
+          experience: action.experience,
+          leadership: action.leadership,
         },
       }
     case 'SET_TARGET_POSITION':

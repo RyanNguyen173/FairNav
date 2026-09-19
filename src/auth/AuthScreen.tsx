@@ -1,4 +1,4 @@
-import { CheckCircle, LockKey, ShieldCheck } from '@phosphor-icons/react'
+import { CheckCircle, LockKey } from '@phosphor-icons/react'
 import { useState } from 'react'
 import { Button } from '../components/Button'
 import { FieldLabel, TextInput } from '../components/StepShell'
@@ -24,18 +24,6 @@ function getPasswordStrength(password: string) {
   const labels = ['Very weak', 'Weak', 'Fair', 'Good', 'Strong']
   const colors = ['bg-destructive', 'bg-destructive', 'bg-accent', 'bg-secondary', 'bg-success']
   return { score: clamped, label: labels[clamped], color: colors[clamped] }
-}
-
-function PrivacyBadge() {
-  return (
-    <div className="flex items-start gap-2.5 rounded-xl border border-border bg-muted p-3">
-      <ShieldCheck size={18} weight="fill" className="mt-0.5 shrink-0 text-primary" aria-hidden="true" />
-      <p className="text-xs leading-relaxed text-muted-foreground">
-        Your resume and recruiter notes are encrypted on your device using your password. We can
-        never read your personal data.
-      </p>
-    </div>
-  )
 }
 
 function UnlockPrompt() {
@@ -249,10 +237,6 @@ export function AuthScreen() {
               />
               Remember me on this device
             </label>
-
-            <div className="mb-5">
-              <PrivacyBadge />
-            </div>
 
             {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
             {infoMessage && <p className="mb-4 text-sm text-success">{infoMessage}</p>}

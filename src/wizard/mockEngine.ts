@@ -72,6 +72,24 @@ const INTEREST_POOL = [
   'Marketing',
 ]
 
+const EXPERIENCE_POOL = [
+  'Software Engineering Intern @ Northwind Analytics (2024)',
+  'Data Analyst Co-op @ Cascade Health Collective (2023)',
+  'Research Assistant, Machine Learning Lab (2023-2024)',
+  'Teaching Assistant, Intro to Data Structures (2023)',
+  'Product Design Intern @ Studio Halcyon (2024)',
+  'Freelance Web Developer (2022-present)',
+]
+
+const LEADERSHIP_POOL = [
+  'President, Robotics Club',
+  'Treasurer, Student Government Association',
+  'Team Lead, Hackathon Organizing Committee',
+  'Mentor, First-Year Engineering Program',
+  'Captain, Varsity Debate Team',
+  'Volunteer Coordinator, Campus Food Bank',
+]
+
 function pickRandom<T>(pool: T[], count: number): T[] {
   const shuffled = [...pool].sort(() => Math.random() - 0.5)
   return shuffled.slice(0, count)
@@ -91,6 +109,8 @@ export interface ParsedResume {
   gradYear: string
   skills: string[]
   interests: string[]
+  experience: string[]
+  leadership: string[]
 }
 
 /** Simulates extracting contact info, skills, and interests from an uploaded PDF/DOCX. */
@@ -112,6 +132,8 @@ export async function mockParseResume(file: File): Promise<ParsedResume> {
     gradYear: String(2026 + Math.floor(Math.random() * 4)),
     skills: pickRandom(SKILL_POOL, 5),
     interests: pickRandom(INTEREST_POOL, 3),
+    experience: pickRandom(EXPERIENCE_POOL, 2),
+    leadership: pickRandom(LEADERSHIP_POOL, 2),
   }
 }
 
