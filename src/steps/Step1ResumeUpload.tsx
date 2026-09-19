@@ -14,7 +14,7 @@ const POSITION_OPTIONS: { value: TargetPosition; label: string; icon: typeof Gra
 
 export function Step1ResumeUpload() {
   const { state, dispatch, goNext } = useWizard()
-  const { resume, profile } = state
+  const { resume } = state
   const isParsed = resume.status === 'done'
 
   const handleFile = async (file: File) => {
@@ -29,7 +29,7 @@ export function Step1ResumeUpload() {
       skills: parsed.skills,
       interests: parsed.interests,
       experience: parsed.experience,
-      leadership: parsed.leadership,
+      education: parsed.education,
     })
   }
 
@@ -44,9 +44,9 @@ export function Step1ResumeUpload() {
         }
       >
         <p className="mb-5 text-sm text-muted-foreground md:max-w-lg">
-          Upload your resume and we&apos;ll pull out your contact info, skills, experience, and
-          leadership roles to match you with companies at the fair — check the details below to
-          make sure we read your resume correctly.
+          Upload your resume and we&apos;ll pull out your contact info and skills to match you
+          with companies at the fair — you&apos;ll get a chance to confirm your work experience
+          and education on the next step.
         </p>
 
         <div className="md:grid md:grid-cols-2 md:gap-8">
@@ -99,47 +99,19 @@ export function Step1ResumeUpload() {
             <SectionCard>
               <h2 className="mb-3 text-sm font-semibold text-foreground">Extracted profile details</h2>
               {isParsed ? (
-                <div className="space-y-5">
-                  <dl className="space-y-3">
-                    {[
-                      ['Full name', resume.contact.fullName],
-                      ['Email', resume.contact.email],
-                      ['Phone', resume.contact.phone],
-                      ['University', resume.contact.university],
-                    ].map(([label, value]) => (
-                      <div key={label}>
-                        <dt className="text-xs font-medium text-muted-foreground">{label}</dt>
-                        <dd className="text-[15px] text-card-foreground">{value}</dd>
-                      </div>
-                    ))}
-                  </dl>
-
-                  {profile.experience.length > 0 && (
-                    <div>
-                      <p className="mb-1.5 text-xs font-medium text-muted-foreground">Experience</p>
-                      <ul className="space-y-1.5">
-                        {profile.experience.map((item) => (
-                          <li key={item} className="text-[15px] leading-snug text-card-foreground">
-                            • {item}
-                          </li>
-                        ))}
-                      </ul>
+                <dl className="space-y-3">
+                  {[
+                    ['Full name', resume.contact.fullName],
+                    ['Email', resume.contact.email],
+                    ['Phone', resume.contact.phone],
+                    ['University', resume.contact.university],
+                  ].map(([label, value]) => (
+                    <div key={label}>
+                      <dt className="text-xs font-medium text-muted-foreground">{label}</dt>
+                      <dd className="text-[15px] text-card-foreground">{value}</dd>
                     </div>
-                  )}
-
-                  {profile.leadership.length > 0 && (
-                    <div>
-                      <p className="mb-1.5 text-xs font-medium text-muted-foreground">Leadership</p>
-                      <ul className="space-y-1.5">
-                        {profile.leadership.map((item) => (
-                          <li key={item} className="text-[15px] leading-snug text-card-foreground">
-                            • {item}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
+                  ))}
+                </dl>
               ) : (
                 <div className="flex flex-col items-center justify-center gap-2 py-8 text-center">
                   <IdentificationCard size={28} weight="regular" className="text-muted-foreground" aria-hidden="true" />

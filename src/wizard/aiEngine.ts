@@ -1,5 +1,5 @@
 import { boothCoordinatesForIndex, mockAnalyzeFair, mockGeneratePrep, mockParseResume, type ParsedResume } from './mockEngine'
-import type { Booth, Company, CompanyPrep, ProfileData } from './types'
+import type { Booth, Company, CompanyPrep, Education, ProfileData, WorkExperience } from './types'
 
 /**
  * Real AI-backed resume parsing / directory parsing / company ranking /
@@ -43,8 +43,8 @@ interface ParseResumeResponse {
   gradYear: string
   skills: string[]
   interests: string[]
-  experience: string[]
-  leadership: string[]
+  experience: Omit<WorkExperience, 'id'>[]
+  education: Omit<Education, 'id'>[]
 }
 
 export async function parseResume(file: File): Promise<ParsedResume> {
@@ -58,8 +58,8 @@ export async function parseResume(file: File): Promise<ParsedResume> {
       gradYear: data.gradYear,
       skills: data.skills,
       interests: data.interests,
-      experience: data.experience,
-      leadership: data.leadership,
+      experience: data.experience.map((entry) => ({ ...entry, id: crypto.randomUUID() })),
+      education: data.education.map((entry) => ({ ...entry, id: crypto.randomUUID() })),
     }
   } catch (error) {
     console.warn('Resume parsing unavailable, using demo data:', error)

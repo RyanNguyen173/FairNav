@@ -12,7 +12,11 @@ export default async function handler(req: Req, res: Res) {
 
     const prompt = `Extract structured information from the attached resume.
 
-Only include information that actually appears in the document. If a field cannot be determined, use an empty string (or an empty array for skills/interests/experience/leadership) - never invent placeholder values. List skills as short keywords or phrases (e.g. "Python", "Public Speaking"), deduplicated, most relevant first, at most 8. Infer 2-4 likely career interest areas (e.g. "Software Engineering", "Data Science") from the resume's projects, experience, and coursework. List each work/internship/research/project experience as one short line combining role, organization, and dates if available (e.g. "Software Engineering Intern @ Acme (Summer 2024)"), most recent first, at most 5. List each leadership or extracurricular role as one short line (e.g. "President, Robotics Club"), at most 5.`
+Only include information that actually appears in the document. If a field cannot be determined, use an empty string (or an empty array for skills/interests/experience/education) - never invent placeholder values. List skills as short keywords or phrases (e.g. "Python", "Public Speaking"), deduplicated, most relevant first, at most 8. Infer 2-4 likely career interest areas (e.g. "Software Engineering", "Data Science") from the resume's projects, experience, and coursework.
+
+For "experience", list every work/internship/research role, most recent first, at most 5. For each: jobTitle, company, location (city, state - empty string if not listed), current (true only if the resume marks this as an ongoing/present role), startDate and endDate as "MM/YYYY" (best guess from whatever date format the resume uses; leave endDate as an empty string when current is true), and description (1-2 sentences summarizing responsibilities/impact, written in the resume's own words as closely as possible - do not invent accomplishments).
+
+For "education", list every degree program listed, most recent first, at most 3. For each: university, degree (e.g. "Bachelor of Science"), fieldOfStudy (major), gpa (empty string if not listed), startDate and expectedGradDate as "MM/YYYY".`
 
     const response = await generateWithRetry(ai, {
       model: MODEL,
@@ -30,8 +34,37 @@ Only include information that actually appears in the document. If a field canno
             gradYear: { type: Type.STRING },
             skills: { type: Type.ARRAY, items: { type: Type.STRING } },
             interests: { type: Type.ARRAY, items: { type: Type.STRING } },
-            experience: { type: Type.ARRAY, items: { type: Type.STRING } },
-            leadership: { type: Type.ARRAY, items: { type: Type.STRING } },
+            experience: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  jobTitle: { type: Type.STRING },
+                  company: { type: Type.STRING },
+                  location: { type: Type.STRING },
+                  current: { type: Type.BOOLEAN },
+                  startDate: { type: Type.STRING },
+                  endDate: { type: Type.STRING },
+                  description: { type: Type.STRING },
+                },
+                required: ['jobTitle', 'company', 'location', 'current', 'startDate', 'endDate', 'description'],
+              },
+            },
+            education: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  university: { type: Type.STRING },
+                  degree: { type: Type.STRING },
+                  fieldOfStudy: { type: Type.STRING },
+                  gpa: { type: Type.STRING },
+                  startDate: { type: Type.STRING },
+                  expectedGradDate: { type: Type.STRING },
+                },
+                required: ['university', 'degree', 'fieldOfStudy', 'gpa', 'startDate', 'expectedGradDate'],
+              },
+            },
           },
           required: [
             'name',
@@ -43,7 +76,7 @@ Only include information that actually appears in the document. If a field canno
             'skills',
             'interests',
             'experience',
-            'leadership',
+            'education',
           ],
         },
       },

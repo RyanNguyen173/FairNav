@@ -2,7 +2,9 @@ import type {
   Company,
   CompanyPrep,
   ContactInfo,
+  Education,
   ProfileData,
+  WorkExperience,
 } from './types'
 
 const MAJOR_POOL = [
@@ -72,23 +74,31 @@ const INTEREST_POOL = [
   'Marketing',
 ]
 
-const EXPERIENCE_POOL = [
-  'Software Engineering Intern @ Northwind Analytics (2024)',
-  'Data Analyst Co-op @ Cascade Health Collective (2023)',
-  'Research Assistant, Machine Learning Lab (2023-2024)',
-  'Teaching Assistant, Intro to Data Structures (2023)',
-  'Product Design Intern @ Studio Halcyon (2024)',
-  'Freelance Web Developer (2022-present)',
+const JOB_TITLE_POOL = [
+  'Software Engineering Intern',
+  'Data Analyst Co-op',
+  'Research Assistant',
+  'Teaching Assistant',
+  'Product Design Intern',
+  'Business Operations Intern',
 ]
 
-const LEADERSHIP_POOL = [
-  'President, Robotics Club',
-  'Treasurer, Student Government Association',
-  'Team Lead, Hackathon Organizing Committee',
-  'Mentor, First-Year Engineering Program',
-  'Captain, Varsity Debate Team',
-  'Volunteer Coordinator, Campus Food Bank',
+const EMPLOYER_POOL = [
+  'Northwind Analytics',
+  'Cascade Health Collective',
+  'Studio Halcyon',
+  'Fablink Robotics',
+  'Brightloop',
+  'Verdant Finance',
 ]
+
+const JOB_LOCATION_POOL = ['Seattle, WA', 'Austin, TX', 'San Jose, CA', 'Remote', 'Atlanta, GA', 'Chicago, IL']
+
+const DEGREE_POOL = ['Bachelor of Science', 'Bachelor of Arts']
+
+function mmYyyy(month: number, year: number) {
+  return `${String(month).padStart(2, '0')}/${year}`
+}
 
 function pickRandom<T>(pool: T[], count: number): T[] {
   const shuffled = [...pool].sort(() => Math.random() - 0.5)
@@ -109,11 +119,43 @@ export interface ParsedResume {
   gradYear: string
   skills: string[]
   interests: string[]
-  experience: string[]
-  leadership: string[]
+  experience: WorkExperience[]
+  education: Education[]
 }
 
-/** Simulates extracting contact info, skills, and interests from an uploaded PDF/DOCX. */
+function randomExperienceEntry(mostRecent: boolean): WorkExperience {
+  const jobTitle = randomFrom(JOB_TITLE_POOL)
+  const company = randomFrom(EMPLOYER_POOL)
+  const startYear = 2023 + Math.floor(Math.random() * 2)
+  const startMonth = 1 + Math.floor(Math.random() * 9)
+  const current = mostRecent && Math.random() < 0.5
+  const endMonth = Math.min(12, startMonth + 2 + Math.floor(Math.random() * 3))
+
+  return {
+    id: crypto.randomUUID(),
+    jobTitle,
+    company,
+    location: randomFrom(JOB_LOCATION_POOL),
+    current,
+    startDate: mmYyyy(startMonth, startYear),
+    endDate: current ? '' : mmYyyy(endMonth, startYear),
+    description: `Contributed to ${jobTitle.toLowerCase()} projects at ${company}, collaborating cross-functionally to ship work and improve team processes.`,
+  }
+}
+
+function randomEducationEntry(): Education {
+  return {
+    id: crypto.randomUUID(),
+    university: randomFrom(UNIVERSITY_POOL),
+    degree: randomFrom(DEGREE_POOL),
+    fieldOfStudy: randomFrom(MAJOR_POOL),
+    gpa: Math.min(4, 3 + Math.random()).toFixed(2),
+    startDate: mmYyyy(9, 2022),
+    expectedGradDate: mmYyyy(5, 2026 + Math.floor(Math.random() * 3)),
+  }
+}
+
+/** Simulates extracting contact info, skills, experience, and education from an uploaded PDF/DOCX. */
 export async function mockParseResume(file: File): Promise<ParsedResume> {
   await fakeDelay(1600)
   const baseName = file.name.replace(/\.(pdf|docx)$/i, '').replace(/[_-]/g, ' ')
@@ -132,8 +174,8 @@ export async function mockParseResume(file: File): Promise<ParsedResume> {
     gradYear: String(2026 + Math.floor(Math.random() * 4)),
     skills: pickRandom(SKILL_POOL, 5),
     interests: pickRandom(INTEREST_POOL, 3),
-    experience: pickRandom(EXPERIENCE_POOL, 2),
-    leadership: pickRandom(LEADERSHIP_POOL, 2),
+    experience: [randomExperienceEntry(false), randomExperienceEntry(true)],
+    education: [randomEducationEntry()],
   }
 }
 

@@ -16,9 +16,11 @@ import {
   type Company,
   type CompanyPrep,
   type ContactInfo,
+  type Education,
   type ExperienceLevel,
   type TargetPosition,
   type WizardState,
+  type WorkExperience,
 } from './types'
 
 /** Debounce so we don't hit the database on every keystroke. */
@@ -35,8 +37,8 @@ type Action =
       gradYear: string
       skills: string[]
       interests: string[]
-      experience: string[]
-      leadership: string[]
+      experience: WorkExperience[]
+      education: Education[]
     }
   | { type: 'SET_TARGET_POSITION'; position: TargetPosition }
   | { type: 'SET_PROFILE_FIELD'; field: 'major' | 'gradYear'; value: string }
@@ -45,6 +47,12 @@ type Action =
   | { type: 'REMOVE_SKILL'; skill: string }
   | { type: 'ADD_INTEREST'; interest: string }
   | { type: 'REMOVE_INTEREST'; interest: string }
+  | { type: 'ADD_EXPERIENCE' }
+  | { type: 'UPDATE_EXPERIENCE'; id: string; patch: Partial<Omit<WorkExperience, 'id'>> }
+  | { type: 'REMOVE_EXPERIENCE'; id: string }
+  | { type: 'ADD_EDUCATION' }
+  | { type: 'UPDATE_EDUCATION'; id: string; patch: Partial<Omit<Education, 'id'>> }
+  | { type: 'REMOVE_EDUCATION'; id: string }
   | { type: 'SET_FAIR_FIELD'; field: 'eventName' | 'date' | 'location'; value: string }
   | { type: 'SET_MAP_FILE'; fileName: string }
   | { type: 'SET_COMPANY_LIST_FILE'; fileName: string }
@@ -86,7 +94,7 @@ function reducer(state: WizardState, action: Action): WizardState {
           skills: action.skills,
           interests: action.interests,
           experience: action.experience,
-          leadership: action.leadership,
+          education: action.education,
         },
       }
     case 'SET_TARGET_POSITION':
@@ -117,6 +125,81 @@ function reducer(state: WizardState, action: Action): WizardState {
           ...state.profile,
           interests: state.profile.interests.filter((i) => i !== action.interest),
         },
+      }
+
+    case 'ADD_EXPERIENCE':
+      return {
+        ...state,
+        profile: {
+          ...state.profile,
+          experience: [
+            ...state.profile.experience,
+            {
+              id: crypto.randomUUID(),
+              jobTitle: '',
+              company: '',
+              location: '',
+              current: false,
+              startDate: '',
+              endDate: '',
+              description: '',
+            },
+          ],
+        },
+      }
+    case 'UPDATE_EXPERIENCE':
+      return {
+        ...state,
+        profile: {
+          ...state.profile,
+          experience: state.profile.experience.map((entry) => {
+            if (entry.id !== action.id) return entry
+            const merged = { ...entry, ...action.patch }
+            // Checking "currently work here" makes an end date meaningless.
+            if (merged.current) merged.endDate = ''
+            return merged
+          }),
+        },
+      }
+    case 'REMOVE_EXPERIENCE':
+      return {
+        ...state,
+        profile: { ...state.profile, experience: state.profile.experience.filter((e) => e.id !== action.id) },
+      }
+
+    case 'ADD_EDUCATION':
+      return {
+        ...state,
+        profile: {
+          ...state.profile,
+          education: [
+            ...state.profile.education,
+            {
+              id: crypto.randomUUID(),
+              university: '',
+              degree: '',
+              fieldOfStudy: '',
+              gpa: '',
+              startDate: '',
+              expectedGradDate: '',
+            },
+          ],
+        },
+      }
+    case 'UPDATE_EDUCATION':
+      return {
+        ...state,
+        profile: {
+          ...state.profile,
+          education: state.profile.education.map((entry) =>
+            entry.id === action.id ? { ...entry, ...action.patch } : entry,
+          ),
+        },
+      }
+    case 'REMOVE_EDUCATION':
+      return {
+        ...state,
+        profile: { ...state.profile, education: state.profile.education.filter((e) => e.id !== action.id) },
       }
 
     case 'SET_FAIR_FIELD':
@@ -209,6 +292,30 @@ interface WizardContextValue {
 
 const WizardContext = createContext<WizardContextValue | null>(null)
 
+/**
+ * Guards against a saved profile from before experience/education became
+ * structured objects (it used to be `experience: string[]` plus a separate
+ * `leadership: string[]`) - merging that shape in as-is would satisfy the
+ * "array exists" check but crash the new UI reading `.jobTitle`/`.university`
+ * off of what are actually plain strings. Drop anything that doesn't look
+ * like the current shape rather than trusting old saved data blindly.
+ */
+function sanitizeExperience(value: unknown): WorkExperience[] {
+  if (!Array.isArray(value)) return []
+  return value.filter(
+    (item): item is WorkExperience =>
+      typeof item === 'object' && item !== null && typeof (item as WorkExperience).id === 'string' && typeof (item as WorkExperience).jobTitle === 'string',
+  )
+}
+
+function sanitizeEducation(value: unknown): Education[] {
+  if (!Array.isArray(value)) return []
+  return value.filter(
+    (item): item is Education =>
+      typeof item === 'object' && item !== null && typeof (item as Education).id === 'string' && typeof (item as Education).university === 'string',
+  )
+}
+
 interface WizardProviderProps {
   children: ReactNode
   /** Decrypted state from sign-in, to resume where the user left off. */
@@ -226,7 +333,12 @@ export function WizardProvider({ children, initialState }: WizardProviderProps) 
           // object from before a schema change (e.g. adding experience/leadership)
           // would fully replace these defaults and leave newer fields undefined.
           resume: { ...initialWizardState.resume, ...initialState.resume },
-          profile: { ...initialWizardState.profile, ...initialState.profile },
+          profile: {
+            ...initialWizardState.profile,
+            ...initialState.profile,
+            experience: sanitizeExperience(initialState.profile?.experience),
+            education: sanitizeEducation(initialState.profile?.education),
+          },
           fair: { ...initialWizardState.fair, ...initialState.fair },
           fairMode: { ...initialWizardState.fairMode, ...initialState.fairMode },
         }

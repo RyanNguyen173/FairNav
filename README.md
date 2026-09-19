@@ -18,7 +18,7 @@ work), same fallback philosophy as the AI calls below.
 Every AI step is its own Gemini-backed serverless function, each holding
 `GEMINI_API_KEY` server-side:
 
-- `api/parse-resume.ts` — resume → contact info, major, grad year, skills, interests
+- `api/parse-resume.ts` — resume → contact info, major, grad year, skills, interests, work experience, and education
 - `api/parse-directory.ts` — exhibitor directory (file or pasted text) → company + booth number pairs
 - `api/rank-companies.ts` — parsed booths + profile → ranked companies with match scores
 - `api/generate-pitches.ts` — selected companies + profile → elevator pitch + questions per company
@@ -143,7 +143,7 @@ match.
 ```
 api/
   _lib/gemini.ts        Shared client init, retry logic, error handling (not a route)
-  parse-resume.ts        Resume -> contact info, major, gradYear, skills, interests
+  parse-resume.ts        Resume -> contact info, major, gradYear, skills, interests, experience, education
   parse-directory.ts     Exhibitor directory -> company + booth number pairs
   rank-companies.ts      Parsed booths + profile -> ranked companies
   generate-pitches.ts    Selected companies + profile -> pitch + questions per company

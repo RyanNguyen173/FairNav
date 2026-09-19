@@ -17,16 +17,40 @@ export interface ResumeData {
   targetPosition: TargetPosition
 }
 
+export interface WorkExperience {
+  id: string
+  jobTitle: string
+  company: string
+  location: string
+  /** When true, endDate is meaningless and should be ignored/blank. */
+  current: boolean
+  /** MM/YYYY */
+  startDate: string
+  /** MM/YYYY, blank when `current` is true. */
+  endDate: string
+  description: string
+}
+
+export interface Education {
+  id: string
+  university: string
+  degree: string
+  fieldOfStudy: string
+  gpa: string
+  /** MM/YYYY */
+  startDate: string
+  /** MM/YYYY */
+  expectedGradDate: string
+}
+
 export interface ProfileData {
   major: string
   gradYear: string
   experienceLevel: ExperienceLevel
   skills: string[]
   interests: string[]
-  /** One line per role/internship/project, e.g. "Software Engineering Intern @ Acme (2024)". */
-  experience: string[]
-  /** One line per leadership/extracurricular role, e.g. "President, Robotics Club". */
-  leadership: string[]
+  experience: WorkExperience[]
+  education: Education[]
 }
 
 export interface FairData {
@@ -101,7 +125,7 @@ export const initialWizardState: WizardState = {
     skills: [],
     interests: [],
     experience: [],
-    leadership: [],
+    education: [],
   },
   fair: {
     eventName: '',
