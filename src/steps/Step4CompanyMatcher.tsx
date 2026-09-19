@@ -4,7 +4,7 @@ import { Button } from '../components/Button'
 import { Header } from '../components/Header'
 import { StepShell } from '../components/StepShell'
 import { generatePreps } from '../wizard/aiEngine'
-import type { AcademicStanding, Company } from '../wizard/types'
+import type { Company } from '../wizard/types'
 import { useActiveFair, useWizard } from '../wizard/WizardContext'
 
 function MatchBadge({ percent }: { percent: number }) {
@@ -15,35 +15,12 @@ function MatchBadge({ percent }: { percent: number }) {
   )
 }
 
-/**
- * Only rendered when the source directory actually stated accepted
- * standings for this booth (acceptedStandings.length > 0) - an empty array
- * means "not stated," not "accepts everyone," so no badge is shown rather
- * than implying eligibility the data doesn't actually confirm.
- */
-function StandingBadge({ company, standing }: { company: Company; standing: AcademicStanding }) {
-  if (company.acceptedStandings.length === 0) return null
-  const eligible = company.acceptedStandings.includes(standing)
-  return (
-    <span
-      className={[
-        'inline-flex w-fit items-center rounded-full px-2 py-0.5 text-[11px] font-semibold',
-        eligible ? 'bg-success/15 text-success' : 'bg-destructive/15 text-destructive',
-      ].join(' ')}
-    >
-      {eligible ? `Eligible: accepts ${standing}` : `Accepts ${company.acceptedStandings.join('/')} only`}
-    </span>
-  )
-}
-
 function CompanyCard({
   company,
-  standing,
   selected,
   onToggle,
 }: {
   company: Company
-  standing: AcademicStanding
   selected: boolean
   onToggle: () => void
 }) {
@@ -81,7 +58,6 @@ function CompanyCard({
             </span>
           ))}
         </div>
-        <StandingBadge company={company} standing={standing} />
       </div>
     </label>
   )
@@ -93,13 +69,6 @@ export function Step4CompanyMatcher() {
   const { companies, selectedCompanyIds } = useActiveFair()
   const selectedCount = selectedCompanyIds.length
   const [isGenerating, setIsGenerating] = useState(false)
-  const [hideIneligible, setHideIneligible] = useState(false)
-
-  const visibleCompanies = hideIneligible
-    ? companies.filter(
-        (company) => company.acceptedStandings.length === 0 || company.acceptedStandings.includes(profile.academicStanding),
-      )
-    : companies
 
   const handleGenerate = async () => {
     setIsGenerating(true)
@@ -138,27 +107,16 @@ export function Step4CompanyMatcher() {
           </div>
         }
       >
-        <p className="mb-3 text-sm text-muted-foreground">
+        <p className="mb-5 text-sm text-muted-foreground">
           Ranked from most to least relevant to your profile. Select who you want to visit.
         </p>
 
-        <label className="mb-5 flex w-fit cursor-pointer items-center gap-2 text-sm text-muted-foreground">
-          <input
-            type="checkbox"
-            checked={hideIneligible}
-            onChange={(event) => setHideIneligible(event.target.checked)}
-            className="h-4 w-4 cursor-pointer accent-primary"
-          />
-          Hide booths that don&apos;t accept my class standing
-        </label>
-
         <div className="md:grid md:grid-cols-[1fr_300px] md:items-start md:gap-6">
           <div className="grid gap-3 md:grid-cols-2">
-            {visibleCompanies.map((company) => (
+            {companies.map((company) => (
               <CompanyCard
                 key={company.id}
                 company={company}
-                standing={profile.academicStanding}
                 selected={selectedCompanyIds.includes(company.id)}
                 onToggle={() => dispatch({ type: 'TOGGLE_COMPANY_SELECTION', id: company.id })}
               />

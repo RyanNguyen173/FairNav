@@ -8,8 +8,6 @@ export const maxDuration = 60
 interface Booth {
   boothNumber: string
   companyName: string
-  acceptedStandings: string[]
-  citizenshipRequirement: string
 }
 
 interface RankCompaniesPayload {
@@ -63,24 +61,6 @@ For each company, keep its companyName and boothNumber exactly as given, and add
       },
     })
 
-    const parsed = JSON.parse(response.text ?? '{"rankedCompanies":[]}') as {
-      rankedCompanies: { companyName: string; boothNumber: string; matchScore: number; summary: string; openRoles: string[] }[]
-    }
-
-    // Merge in acceptedStandings/citizenshipRequirement from the original
-    // booths ourselves rather than asking Gemini to repeat them back - it's
-    // already-extracted data, not something to infer, so passing it through
-    // in code avoids any risk of the model altering or dropping it.
-    const boothsByName = new Map(booths.map((booth) => [booth.companyName.toLowerCase(), booth]))
-    const rankedCompanies = parsed.rankedCompanies.map((company) => {
-      const booth = boothsByName.get(company.companyName.toLowerCase())
-      return {
-        ...company,
-        acceptedStandings: booth?.acceptedStandings ?? [],
-        citizenshipRequirement: booth?.citizenshipRequirement ?? '',
-      }
-    })
-
-    return { rankedCompanies }
+    return JSON.parse(response.text ?? '{"rankedCompanies":[]}')
   })
 }

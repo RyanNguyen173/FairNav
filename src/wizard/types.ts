@@ -1,7 +1,5 @@
 export type TargetPosition = 'internship' | 'fulltime'
 export type AsyncStatus = 'idle' | 'working' | 'done'
-export type SpeechStyle = 'concise' | 'enthusiastic' | 'technical' | 'custom'
-export type AcademicStanding = 'Freshman' | 'Sophomore' | 'Junior' | 'Senior' | 'Graduate'
 
 export interface ContactInfo {
   fullName: string
@@ -51,23 +49,11 @@ export interface ProfileData {
   interests: string[]
   experience: WorkExperience[]
   education: Education[]
-  academicStanding: AcademicStanding
-  speechStyle: SpeechStyle
-  /** 1-2 sentences of the user's own writing/speech, pasted in to help pitches sound like them instead of generic AI. */
-  voiceSample: string
 }
 
 export interface Booth {
   boothNumber: string
   companyName: string
-  /**
-   * Only populated when the source exhibitor directory explicitly states
-   * this - Gemini is instructed never to guess it. An empty array means
-   * "not stated," not "accepts everyone."
-   */
-  acceptedStandings: AcademicStanding[]
-  /** Empty string when not explicitly stated in the source directory. */
-  citizenshipRequirement: string
 }
 
 export interface Company {
@@ -81,9 +67,6 @@ export interface Company {
   y: number
   /** 0-100, computed once companies are matched against the profile */
   matchScore: number
-  /** See Booth.acceptedStandings - empty means not stated in the source directory. */
-  acceptedStandings: AcademicStanding[]
-  citizenshipRequirement: string
 }
 
 export interface CompanyPrep {
@@ -193,9 +176,6 @@ export const initialWizardState: WizardState = {
     interests: [],
     experience: [],
     education: [],
-    academicStanding: 'Freshman',
-    speechStyle: 'concise',
-    voiceSample: '',
   },
   // Seeded with one fair so the existing single-fair flow (Steps 3-6) keeps
   // working unchanged until the dashboard UI for managing several exists.

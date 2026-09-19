@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
         ? `Extract every company and, if given, its booth number from this list:\n${rawText}`
         : 'No directory was provided. Invent a realistic set of 8-10 companies (with plausible booth numbers) that would attend a general career fair.'
 
-    const prompt = `${instruction}\n\nReturn each company's name and booth number (empty string if no booth number is given or known). Also extract, ONLY if explicitly stated in the source text/document: which class standings the booth accepts (acceptedStandings - leave as an empty array if not stated, never guess or assume "everyone"), and any citizenship/clearance requirement mentioned (citizenshipRequirement - empty string if not stated).`
+    const prompt = `${instruction}\n\nReturn each company's name and booth number (empty string if no booth number is given or known).`
 
     const response = await generateWithRetry(ai, {
       model: MODEL,
@@ -38,17 +38,8 @@ export async function POST(request: NextRequest) {
                 properties: {
                   boothNumber: { type: Type.STRING },
                   companyName: { type: Type.STRING },
-                  acceptedStandings: {
-                    type: Type.ARRAY,
-                    items: {
-                      type: Type.STRING,
-                      format: 'enum',
-                      enum: ['Freshman', 'Sophomore', 'Junior', 'Senior', 'Graduate'],
-                    },
-                  },
-                  citizenshipRequirement: { type: Type.STRING },
                 },
-                required: ['boothNumber', 'companyName', 'acceptedStandings', 'citizenshipRequirement'],
+                required: ['boothNumber', 'companyName'],
               },
             },
           },
