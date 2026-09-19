@@ -11,35 +11,32 @@ Built for SASEhack 2026 — Social Impact and Design tracks.
 
 Accounts, encryption, and persistence (Supabase Auth + Postgres, AES-256-GCM
 client-side encryption) are live — see "Authentication & encryption" below.
-If `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` aren't set, the app skips
-auth entirely and runs the wizard directly (no bricked app during local UI
-work), same fallback philosophy as the AI calls below.
+If `NEXT_PUBLIC_SUPABASE_URL`/`NEXT_PUBLIC_SUPABASE_ANON_KEY` aren't set, the
+app skips auth entirely and runs the wizard directly (no bricked app during
+local UI work), same fallback philosophy as the AI calls below.
 
-Every AI step is its own Gemini-backed serverless function, each holding
+Every AI step is its own Gemini-backed Next.js Route Handler, each holding
 `GEMINI_API_KEY` server-side:
 
-- `api/parse-resume.ts` — resume → contact info, major, grad year, skills, interests, work experience, and education
-- `api/parse-directory.ts` — exhibitor directory (file or pasted text) → company + booth number pairs
-- `api/rank-companies.ts` — parsed booths + profile → ranked companies with match scores
-- `api/generate-pitches.ts` — selected companies + profile → elevator pitch + questions per company
+- `app/api/parse-resume` — resume → contact info, major, grad year, skills, interests, work experience, and education
+- `app/api/parse-directory` — exhibitor directory (file or pasted text) → company + booth number pairs
+- `app/api/rank-companies` — parsed booths + profile → ranked companies with match scores
+- `app/api/generate-pitches` — selected companies + profile → elevator pitch + questions per company
 
-If any call fails for any reason — no key configured, offline, running
-under plain `vite dev`, rate limited — the app falls back to the original
-simulated data in `src/wizard/mockEngine.ts` so the wizard stays usable
-either way (a console warning notes when this happens).
+If any call fails for any reason — no key configured, offline, rate limited
+— the app falls back to the original simulated data in `src/wizard/mockEngine.ts`
+so the wizard stays usable either way (a console warning notes when this happens).
 
 Pitch generation for all selected companies happens in a single request
 rather than one per company — fewer concurrent calls against the same API
 key/rate limit, which is both faster and less prone to transient "model
 overloaded" errors. Transient 503/429 responses from Gemini are retried
-once with backoff before giving up.
+once with backoff before giving up. Every call also sets `thinkingLevel:
+MINIMAL` (Gemini 3.x's low-latency setting) since these are structured
+extraction/classification tasks, not multi-step reasoning.
 
-Three follow-ups are intentionally deferred and still open:
+Two follow-ups are intentionally deferred and still open:
 
-- **Six separate routes.** The app currently runs as a single-page wizard
-  (one URL, step state held in memory). Splitting it into six deep-linkable
-  routes (`/upload`, `/profile`, `/matches`, ...) with persisted step state
-  is the next structural change.
 - **Booth map image isn't analyzed.** Step 3's "Booth map" upload (the
   fair's physical layout image/PDF) is stored by name only and never read —
   the route map's booth positions are a synthetic grid (`boothCoordinatesForIndex`
@@ -47,22 +44,28 @@ Three follow-ups are intentionally deferred and still open:
   vision input to place booths at real positions is a natural next step, but
   adds another AI call (and more latency) per fair setup, so it's left as a
   deliberate choice rather than bundled in silently.
-- **Model name unverified.** `MODEL` in `api/_lib/gemini.ts` is set to
-  `gemini-3.5-flash-lite` as requested. If it 404s as an unrecognized model,
-  swap it for a confirmed current model there (one edit point for all four
-  functions).
+- **No route guards.** Each wizard step is now a real URL (see "Stack"
+  below), but nothing stops visiting e.g. `/matches` directly before
+  finishing `/fair` - it'll just render with empty data. Not a problem for
+  the intended flow (each step's own footer button is the only way forward),
+  but worth knowing if you're testing by typing URLs directly.
 
 ## Stack
 
-- Vite + React + TypeScript
-- Tailwind CSS v4 (`@tailwindcss/vite`), design tokens in `src/index.css`
-- Phosphor icons (`@phosphor-icons/react`)
-- Gemini API (`@google/genai`), 4 separate Vercel serverless functions
-  sharing helpers from `api/_lib/gemini.ts`
+- **Next.js (App Router) + React + TypeScript**, fully client-rendered
+  (every page is a `'use client'` component - this app is an authenticated
+  tool with per-user encrypted state, not content that benefits from SSR).
+- Six wizard steps as real routes (`/upload`, `/profile`, `/fair`, `/matches`,
+  `/briefs`, `/fair-mode`) instead of in-memory step switching - `/` redirects
+  to wherever `WizardContext` says you left off.
+- Tailwind CSS v4 (`@tailwindcss/postcss`), design tokens in `app/globals.css`.
+- Phosphor icons (`@phosphor-icons/react`).
+- Gemini API (`@google/genai`), 4 Route Handlers under `app/api/*/route.ts`
+  sharing helpers from `src/lib/gemini.ts`.
 - Supabase (`@supabase/supabase-js`) for email/password auth and Postgres
-  storage of encrypted profile data
+  storage of encrypted profile data.
 - Web Crypto API (PBKDF2 + AES-256-GCM) for client-side encryption —
-  `src/lib/crypto.ts`, no dependency
+  `src/lib/crypto.ts`, no dependency.
 
 ## Running locally
 
@@ -71,9 +74,8 @@ npm install
 npm run dev
 ```
 
-This runs the wizard in demo mode (the plain Vite dev server doesn't serve
-`/api/*` routes, and without Supabase env vars auth is skipped entirely) —
-good enough for UI work, but AI calls fall back to mock data.
+Without `GEMINI_API_KEY`/Supabase env vars set, AI calls fall back to mock
+data and auth is skipped entirely — good enough for UI work with zero setup.
 
 ## Authentication & encryption
 
@@ -95,7 +97,10 @@ page reload — but the encryption key is never persisted (by design), so
 `AuthScreen.tsx`'s `UnlockPrompt` asks for the password again to re-derive
 it before any encrypted data can be read. This is what keeps the
 zero-knowledge property real rather than nominal: a persisted session alone
-is never enough to decrypt anything.
+is never enough to decrypt anything. `AuthContext.tsx` tracks an
+`authenticating` flag so this prompt doesn't flash on-screen during the
+brief window between Supabase establishing the session and the key
+finishing derivation right after you submit the sign-in form.
 
 Password-only auth (no magic link) was a deliberate simplification — the
 original spec's magic-link option couldn't supply a password to derive a
@@ -109,8 +114,8 @@ after signing in, which added a confusing extra screen for little benefit.
    `profiles` table with Row Level Security — the anon key can only ever
    read/write the signed-in user's own row).
 3. From Settings → API, copy the Project URL and anon public key into
-   `.env` as `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (see
-   `.env.example`). These are meant to ship in the client bundle — the
+   `.env.local` as `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   (see `.env.example`). These are meant to ship in the client bundle — the
    anon key's access is enforced by the database's RLS policies, not by
    secrecy.
 4. For deployment, set the same two variables in Vercel's project settings.
@@ -118,41 +123,48 @@ after signing in, which added a confusing extra screen for little benefit.
 ## Using the real AI backend
 
 1. Get a key from [Google AI Studio](https://aistudio.google.com/apikey).
-2. Copy `.env.example` to `.env` and paste it into `GEMINI_API_KEY`.
-3. Install the Vercel CLI once (`npm i -g vercel`), then run `vercel dev`
-   instead of `npm run dev` — this serves all 4 `api/*.ts` functions locally
-   alongside the Vite app and picks up `.env` automatically.
+2. Copy `.env.example` to `.env.local` and paste it into `GEMINI_API_KEY`.
+3. Run `npm run dev` — Next.js serves the 4 `app/api/*/route.ts` handlers
+   alongside the app automatically and picks up `.env.local` on its own, no
+   extra CLI or config needed.
 4. To deploy: import the repo at [vercel.com](https://vercel.com) (zero-config
-   for Vite), then set `GEMINI_API_KEY` as an environment variable in the
-   project's settings. Netlify works too, with the functions moved to
-   `netlify/functions/`.
+   for Next.js), then set `GEMINI_API_KEY` as an environment variable in the
+   project's settings.
 
 Note: resume and directory files are base64-encoded and sent in the
-function's request body, which has a practical size ceiling well under the
-10MB the UI mentions (Vercel functions cap request bodies around 4.5MB) —
-large files may need a signed-upload flow later.
+route handler's request body, which has a practical size ceiling well under
+the 10MB the UI mentions (Vercel functions cap request bodies around 4.5MB)
+— large files may need a signed-upload flow later.
 
-`vercel.json` sets each function's `maxDuration` to 60s (Vercel's default is
-much shorter and calls that include a document, like a resume or exhibitor
-PDF, can take longer than that). If you're on a plan with a lower cap,
-Vercel will tell you at deploy time — lower the numbers in `vercel.json` to
-match.
+Each route handler exports `export const maxDuration = 60` (Vercel's
+default is much shorter, and calls that include a document, like a resume
+or exhibitor PDF, can take longer than that). If you're on a plan with a
+lower cap, Vercel will tell you at deploy time — lower the number in each
+`app/api/*/route.ts` file to match.
 
 ## Project structure
 
 ```
-api/
-  _lib/gemini.ts        Shared client init, retry logic, error handling (not a route)
-  parse-resume.ts        Resume -> contact info, major, gradYear, skills, interests, experience, education
-  parse-directory.ts     Exhibitor directory -> company + booth number pairs
-  rank-companies.ts      Parsed booths + profile -> ranked companies
-  generate-pitches.ts    Selected companies + profile -> pitch + questions per company
+app/
+  layout.tsx             Root layout - metadata, theme-flash-prevention script
+  providers.tsx           ThemeProvider + AuthProvider + auth gate, wraps every route
+  globals.css              Tailwind import + design tokens
+  page.tsx                 / - redirects to wherever the wizard was left off
+  upload/, profile/, fair/, matches/, briefs/, fair-mode/
+                            One route per wizard step, each a thin page
+                            rendering the matching component from src/steps/
+  api/
+    parse-resume/route.ts        Resume -> contact info, major, gradYear, skills, interests, experience, education
+    parse-directory/route.ts     Exhibitor directory -> company + booth number pairs
+    rank-companies/route.ts      Parsed booths + profile -> ranked companies
+    generate-pitches/route.ts    Selected companies + profile -> pitch + questions per company
 supabase/
   schema.sql     Run once in the Supabase SQL Editor - profiles table + RLS
 src/
   auth/          AuthContext (Supabase session + encryption key lifecycle),
-                 AuthScreen (Page 0: sign in/up, password-unlock prompt)
-  lib/           supabaseClient.ts, crypto.ts (PBKDF2 + AES-256-GCM, no deps)
+                 AuthScreen (sign in/up, password-unlock prompt)
+  lib/           supabaseClient.ts, crypto.ts (PBKDF2 + AES-256-GCM, no deps),
+                 gemini.ts (shared Gemini client/retry logic for the API routes)
   theme/         Light/dark theme context (persists to localStorage)
   wizard/        Wizard state (reducer), types, aiEngine (real calls) and
                  mockEngine (demo fallback data)
@@ -167,7 +179,7 @@ src/
 1px card borders, blue accent highlights (#0066FF light / #3B82F6 dark),
 Plus Jakarta Sans. Light surfaces are a soft off-white with blue tinting
 (#F8FAFC); dark surfaces are deep slate blue-gray (#0B0F17) with electric
-blue highlights. Tokens live in `src/index.css`, tuned to keep 4.5:1 text
+blue highlights. Tokens live in `app/globals.css`, tuned to keep 4.5:1 text
 contrast in both modes (note: buttons use dark text on the bright blue
 background in both themes, since white text on a mid-tone blue like
 #3B82F6 fails that contrast floor).

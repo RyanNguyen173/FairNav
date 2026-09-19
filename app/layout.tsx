@@ -1,0 +1,35 @@
+import type { Metadata } from 'next'
+import type { ReactNode } from 'react'
+import { Providers } from './providers'
+import './globals.css'
+
+export const metadata: Metadata = {
+  title: 'FairNav — Career Fair Copilot',
+  description:
+    'FairNav matches your resume to career fair companies, preps your pitch, and guides your booth route live.',
+  icons: { icon: '/favicon.svg' },
+}
+
+// Runs before hydration so a stored/preferred dark theme applies on first
+// paint instead of flashing light first - ThemeContext.tsx can't do this
+// itself since its effect only runs client-side, after the initial render.
+const THEME_INIT_SCRIPT = `(function () {
+  try {
+    var stored = localStorage.getItem('fairnav-theme');
+    var isDark = stored ? stored === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+    if (isDark) document.documentElement.classList.add('dark');
+  } catch (e) {}
+})();`
+
+export default function RootLayout({ children }: { children: ReactNode }) {
+  return (
+    <html lang="en">
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
+      <body>
+        <Providers>{children}</Providers>
+      </body>
+    </html>
+  )
+}

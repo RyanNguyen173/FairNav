@@ -4,16 +4,17 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
+    "dev": "next dev",
+    "build": "next build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "start": "next start"
   },
   "dependencies": {
     "@google/genai": "^2.23.0",
     "@phosphor-icons/react": "^2.1.10",
     "@supabase/supabase-js": "^2.116.0",
-    "@tailwindcss/vite": "^4.3.3",
+    "@tailwindcss/postcss": "^4.3.3",
+    "next": "^16.3.5",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "tailwindcss": "^4.3.3"
@@ -22,9 +23,7 @@
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
-    "@vitejs/plugin-react": "^6.1.1",
     "oxlint": "^1.81.0",
-    "typescript": "~6.0.2",
-    "vite": "^8.3.0"
+    "typescript": "~6.0.2"
   }
 }

@@ -1,24 +1,14 @@
 import { ApiError, GoogleGenAI, ThinkingLevel } from '@google/genai'
 import type { GenerateContentParameters } from '@google/genai'
-import type { ProfileData } from '../../src/wizard/types.js'
+import { NextResponse, type NextRequest } from 'next/server'
+import type { ProfileData } from '../wizard/types'
 
 /**
- * Shared helpers for the 4 Gemini-only route handlers (parse-resume,
- * parse-directory, rank-companies, generate-pitches). Lives under `_lib/` -
- * Vercel's file-based routing ignores underscore-prefixed paths, so this
- * isn't itself exposed as an endpoint.
+ * Shared helpers for the 4 Gemini-only route handlers
+ * (app/api/parse-resume, parse-directory, rank-companies, generate-pitches).
  */
 
 export const MODEL = 'gemini-3.5-flash-lite'
-
-export interface Req {
-  method?: string
-  body?: unknown
-}
-
-export interface Res {
-  status(code: number): { json(body: unknown): void }
-}
 
 export function getClient(): GoogleGenAI {
   const apiKey = process.env.GEMINI_API_KEY
@@ -67,24 +57,18 @@ export function describeProfile(profile: ProfileData): string {
   ].join('\n')
 }
 
-/** Standard method-check + client init + error handling wrapper. */
+/** Standard client init + error handling wrapper around a POST body's `payload`. */
 export async function withGeminiHandler(
-  req: Req,
-  res: Res,
+  request: NextRequest,
   run: (ai: GoogleGenAI, payload: unknown) => Promise<unknown>,
 ) {
-  if (req.method !== 'POST') {
-    res.status(405).json({ error: 'Method not allowed' })
-    return
-  }
-
   try {
     const ai = getClient()
-    const { payload } = (req.body ?? {}) as { payload?: unknown }
+    const { payload } = (await request.json()) as { payload?: unknown }
     const result = await run(ai, payload)
-    res.status(200).json(result)
+    return NextResponse.json(result)
   } catch (error) {
     console.error('Gemini request failed:', error)
-    res.status(500).json({ error: 'AI request failed' })
+    return NextResponse.json({ error: 'AI request failed' }, { status: 500 })
   }
 }

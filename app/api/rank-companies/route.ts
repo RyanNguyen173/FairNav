@@ -1,6 +1,9 @@
 import { Type } from '@google/genai'
-import { MODEL, generateWithRetry, withGeminiHandler, describeProfile, type Req, type Res } from './_lib/gemini.js'
-import type { ProfileData } from '../src/wizard/types.js'
+import type { NextRequest } from 'next/server'
+import { MODEL, describeProfile, generateWithRetry, withGeminiHandler } from '../../../src/lib/gemini'
+import type { ProfileData } from '../../../src/wizard/types'
+
+export const maxDuration = 60
 
 interface Booth {
   boothNumber: string
@@ -12,8 +15,8 @@ interface RankCompaniesPayload {
   booths: Booth[]
 }
 
-export default async function handler(req: Req, res: Res) {
-  await withGeminiHandler(req, res, async (ai, payload) => {
+export async function POST(request: NextRequest) {
+  return withGeminiHandler(request, async (ai, payload) => {
     const { profile, booths } = payload as RankCompaniesPayload
 
     const boothList = booths

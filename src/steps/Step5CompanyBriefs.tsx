@@ -1,8 +1,10 @@
 import { ChatCircleDots, Check, Copy, Lightbulb } from '@phosphor-icons/react'
+import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { Button } from '../components/Button'
 import { Header } from '../components/Header'
 import { SectionCard, StepShell } from '../components/StepShell'
+import { STEP_ROUTES } from '../wizard/types'
 import { useWizard } from '../wizard/WizardContext'
 
 function CopyButton({ text }: { text: string }) {
@@ -37,7 +39,12 @@ function CopyButton({ text }: { text: string }) {
 
 export function Step5CompanyBriefs() {
   const { state, dispatch, goBack } = useWizard()
+  const router = useRouter()
   const { companies, selectedCompanyIds, prep } = state
+  const enterFairMode = () => {
+    dispatch({ type: 'ENTER_FAIR_MODE' })
+    router.push(STEP_ROUTES[6])
+  }
   const selectedCompanies = companies.filter((c) => selectedCompanyIds.includes(c.id))
   const [activeId, setActiveId] = useState(selectedCompanies[0]?.id)
   const activeCompany = selectedCompanies.find((c) => c.id === activeId) ?? selectedCompanies[0]
@@ -48,7 +55,7 @@ export function Step5CompanyBriefs() {
       <Header step={5} stepLabel="Briefs &amp; pitch prep" onBack={goBack} />
       <StepShell
         footer={
-          <Button fullWidth onClick={() => dispatch({ type: 'ENTER_FAIR_MODE' })}>
+          <Button fullWidth onClick={enterFairMode}>
             Enter Live Fair Mode
           </Button>
         }

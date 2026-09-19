@@ -1,11 +1,12 @@
 import { CheckCircle, SignOut } from '@phosphor-icons/react'
+import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { BottomSheet } from '../components/BottomSheet'
 import { Button } from '../components/Button'
 import { RouteMap } from '../components/RouteMap'
 import { SectionCard } from '../components/StepShell'
 import { ThemeToggle } from '../components/ThemeToggle'
-import type { Company } from '../wizard/types'
+import { STEP_ROUTES, type Company } from '../wizard/types'
 import { useWizard } from '../wizard/WizardContext'
 
 function useElapsedTime(startedAt: number | null) {
@@ -105,8 +106,13 @@ function PitchDetails({ company, pitch }: { company: Company; pitch: { elevatorP
 
 export function Step6FairModeHUD() {
   const { state, dispatch } = useWizard()
+  const router = useRouter()
   const { companies, selectedCompanyIds, prep, fairMode } = state
   const [detailsId, setDetailsId] = useState<string | null>(null)
+  const exitFairMode = () => {
+    dispatch({ type: 'EXIT_FAIR_MODE' })
+    router.push(STEP_ROUTES[5])
+  }
 
   const queue = companies.filter((c) => selectedCompanyIds.includes(c.id))
   const unvisitedQueue = queue.filter((c) => !fairMode.companyState[c.id]?.visited)
@@ -134,7 +140,7 @@ export function Step6FairModeHUD() {
             <ThemeToggle />
             <button
               type="button"
-              onClick={() => dispatch({ type: 'EXIT_FAIR_MODE' })}
+              onClick={exitFairMode}
               aria-label="Exit Fair Mode"
               className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >

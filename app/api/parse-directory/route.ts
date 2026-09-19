@@ -1,13 +1,16 @@
 import { Type, createPartFromBase64, createUserContent } from '@google/genai'
-import { MODEL, generateWithRetry, withGeminiHandler, type Req, type Res } from './_lib/gemini.js'
+import type { NextRequest } from 'next/server'
+import { MODEL, generateWithRetry, withGeminiHandler } from '../../../src/lib/gemini'
+
+export const maxDuration = 60
 
 interface ParseDirectoryPayload {
   rawText: string
   file: { mimeType: string; dataBase64: string } | null
 }
 
-export default async function handler(req: Req, res: Res) {
-  await withGeminiHandler(req, res, async (ai, payload) => {
+export async function POST(request: NextRequest) {
+  return withGeminiHandler(request, async (ai, payload) => {
     const { rawText, file } = payload as ParseDirectoryPayload
 
     const instruction = file

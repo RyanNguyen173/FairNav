@@ -1,3 +1,4 @@
+import { useRouter } from 'next/navigation'
 import {
   createContext,
   useCallback,
@@ -12,6 +13,7 @@ import { encryptJSON } from '../lib/crypto'
 import { supabase } from '../lib/supabaseClient'
 import {
   initialWizardState,
+  STEP_ROUTES,
   TOTAL_STEPS,
   type Company,
   type CompanyPrep,
@@ -319,6 +321,7 @@ interface WizardProviderProps {
 }
 
 export function WizardProvider({ children, initialState }: WizardProviderProps) {
+  const router = useRouter()
   const [state, dispatch] = useReducer(
     reducer,
     initialState
@@ -365,12 +368,16 @@ export function WizardProvider({ children, initialState }: WizardProviderProps) 
   }, [state, session, encryptionKey])
 
   const goNext = useCallback(() => {
-    dispatch({ type: 'GO_TO_STEP', step: state.step + 1 })
-  }, [state.step])
+    const nextStep = Math.min(state.step + 1, TOTAL_STEPS)
+    dispatch({ type: 'GO_TO_STEP', step: nextStep })
+    router.push(STEP_ROUTES[nextStep] ?? STEP_ROUTES[1])
+  }, [state.step, router])
 
   const goBack = useCallback(() => {
-    dispatch({ type: 'GO_TO_STEP', step: state.step - 1 })
-  }, [state.step])
+    const prevStep = Math.max(state.step - 1, 1)
+    dispatch({ type: 'GO_TO_STEP', step: prevStep })
+    router.push(STEP_ROUTES[prevStep] ?? STEP_ROUTES[1])
+  }, [state.step, router])
 
   const value = useMemo(() => ({ state, dispatch, goNext, goBack }), [state, goNext, goBack])
 

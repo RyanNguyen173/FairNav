@@ -107,6 +107,16 @@ export interface WizardState {
 
 export const TOTAL_STEPS = 6
 
+/** Maps each wizard step to its real route, for goNext/goBack navigation. */
+export const STEP_ROUTES: Record<number, string> = {
+  1: '/upload',
+  2: '/profile',
+  3: '/fair',
+  4: '/matches',
+  5: '/briefs',
+  6: '/fair-mode',
+}
+
 export const initialWizardState: WizardState = {
   step: 1,
   resume: {
