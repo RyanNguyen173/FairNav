@@ -5,7 +5,7 @@ import { Header } from '../components/Header'
 import { StepShell } from '../components/StepShell'
 import { generatePreps } from '../wizard/aiEngine'
 import type { Company } from '../wizard/types'
-import { useWizard } from '../wizard/WizardContext'
+import { useActiveFair, useWizard } from '../wizard/WizardContext'
 
 function MatchBadge({ percent }: { percent: number }) {
   const tone =
@@ -65,7 +65,8 @@ function CompanyCard({
 
 export function Step4CompanyMatcher() {
   const { state, dispatch, goNext, goBack } = useWizard()
-  const { companies, selectedCompanyIds, profile } = state
+  const { profile } = state
+  const { companies, selectedCompanyIds } = useActiveFair()
   const selectedCount = selectedCompanyIds.length
   const [isGenerating, setIsGenerating] = useState(false)
 

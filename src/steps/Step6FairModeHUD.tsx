@@ -7,7 +7,7 @@ import { RouteMap } from '../components/RouteMap'
 import { SectionCard } from '../components/StepShell'
 import { ThemeToggle } from '../components/ThemeToggle'
 import { STEP_ROUTES, type Company } from '../wizard/types'
-import { useWizard } from '../wizard/WizardContext'
+import { useActiveFair, useWizard } from '../wizard/WizardContext'
 
 function useElapsedTime(startedAt: number | null) {
   const [elapsedMs, setElapsedMs] = useState(0)
@@ -105,9 +105,9 @@ function PitchDetails({ company, pitch }: { company: Company; pitch: { elevatorP
 }
 
 export function Step6FairModeHUD() {
-  const { state, dispatch } = useWizard()
+  const { dispatch } = useWizard()
   const router = useRouter()
-  const { companies, selectedCompanyIds, prep, fairMode } = state
+  const { companies, selectedCompanyIds, prep, fairMode } = useActiveFair()
   const [detailsId, setDetailsId] = useState<string | null>(null)
   const exitFairMode = () => {
     dispatch({ type: 'EXIT_FAIR_MODE' })

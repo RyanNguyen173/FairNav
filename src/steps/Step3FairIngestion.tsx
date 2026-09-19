@@ -4,15 +4,16 @@ import { Header } from '../components/Header'
 import { FieldLabel, SectionCard, StepShell, TextInput } from '../components/StepShell'
 import { UploadDropzone } from '../components/UploadDropzone'
 import { analyzeFair } from '../wizard/aiEngine'
-import { useWizard } from '../wizard/WizardContext'
+import { useActiveFair, useWizard } from '../wizard/WizardContext'
 
 export function Step3FairIngestion() {
   const { state, dispatch, goNext, goBack } = useWizard()
-  const { fair, profile } = state
+  const { profile } = state
+  const fair = useActiveFair()
   const [directoryMode, setDirectoryMode] = useState<'paste' | 'upload'>('paste')
   const [companyListFile, setCompanyListFile] = useState<File | null>(null)
 
-  const canAnalyze = fair.eventName.trim().length > 0 && fair.status !== 'working'
+  const canAnalyze = fair.name.trim().length > 0 && fair.ingestStatus !== 'working'
 
   const handleAnalyze = async () => {
     dispatch({ type: 'FAIR_ANALYZING' })
@@ -26,7 +27,7 @@ export function Step3FairIngestion() {
       <Header step={3} stepLabel="Fair details &amp; map" onBack={goBack} />
       <StepShell
         footer={
-          <Button fullWidth disabled={!canAnalyze} loading={fair.status === 'working'} onClick={handleAnalyze}>
+          <Button fullWidth disabled={!canAnalyze} loading={fair.ingestStatus === 'working'} onClick={handleAnalyze}>
             Analyze Fair &amp; Match Companies
           </Button>
         }
@@ -42,9 +43,9 @@ export function Step3FairIngestion() {
                 <FieldLabel htmlFor="eventName">Event name</FieldLabel>
                 <TextInput
                   id="eventName"
-                  value={fair.eventName}
+                  value={fair.name}
                   placeholder="e.g. STEM Connect Career Fair"
-                  onChange={(event) => dispatch({ type: 'SET_FAIR_FIELD', field: 'eventName', value: event.target.value })}
+                  onChange={(event) => dispatch({ type: 'SET_FAIR_FIELD', field: 'name', value: event.target.value })}
                 />
               </div>
               <div>
@@ -119,11 +120,11 @@ export function Step3FairIngestion() {
               />
             )}
 
-            {state.companies.length > 0 && (
+            {fair.companies.length > 0 && (
               <SectionCard className="mt-4">
                 <h2 className="mb-3 text-sm font-semibold text-foreground">Extracted directory preview</h2>
                 <ul className="max-h-64 space-y-2 overflow-y-auto">
-                  {state.companies.map((company) => (
+                  {fair.companies.map((company) => (
                     <li key={company.id} className="flex items-center justify-between gap-2 text-sm">
                       <span className="truncate text-card-foreground">{company.companyName}</span>
                       <span className="shrink-0 text-xs text-muted-foreground">

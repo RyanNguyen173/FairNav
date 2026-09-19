@@ -51,16 +51,6 @@ export interface ProfileData {
   education: Education[]
 }
 
-export interface FairData {
-  eventName: string
-  date: string
-  location: string
-  mapFileName: string | null
-  companyListFileName: string | null
-  companyDirectoryText: string
-  status: AsyncStatus
-}
-
 export interface Booth {
   boothNumber: string
   companyName: string
@@ -90,11 +80,26 @@ export interface FairModeCompanyState {
   visitedAt: number | null
 }
 
-export interface WizardState {
-  step: number
-  resume: ResumeData
-  profile: ProfileData
-  fair: FairData
+/** Draft: created but no companies matched yet. In progress: matched, not yet fully worked. Completed: fair mode was entered and exited. */
+export type FairStatus = 'draft' | 'in-progress' | 'completed'
+
+/**
+ * One saved career fair a student is (or was) preparing for - their own
+ * directory, matched companies, pitch prep, and live fair-mode progress.
+ * A student can have several of these, reusing the same base profile
+ * (resume/skills/experience/education) across all of them.
+ */
+export interface FairProfile {
+  id: string
+  name: string
+  date: string
+  location: string
+  targetPosition: TargetPosition
+  status: FairStatus
+  mapFileName: string | null
+  companyListFileName: string | null
+  companyDirectoryText: string
+  ingestStatus: AsyncStatus
   companies: Company[]
   selectedCompanyIds: string[]
   prep: Record<string, CompanyPrep>
@@ -102,6 +107,44 @@ export interface WizardState {
     active: boolean
     startedAt: number | null
     companyState: Record<string, FairModeCompanyState>
+  }
+}
+
+export interface WizardState {
+  step: number
+  resume: ResumeData
+  profile: ProfileData
+  fairProfiles: FairProfile[]
+  activeFairId: string | null
+}
+
+/** Creates a fresh, empty fair profile - used both to seed initial state and by the dashboard's "create new fair" flow. */
+export function createFairProfile(overrides: {
+  id: string
+  name: string
+  date?: string
+  location?: string
+  targetPosition?: TargetPosition
+}): FairProfile {
+  return {
+    id: overrides.id,
+    name: overrides.name,
+    date: overrides.date ?? '',
+    location: overrides.location ?? '',
+    targetPosition: overrides.targetPosition ?? 'internship',
+    status: 'draft',
+    mapFileName: null,
+    companyListFileName: null,
+    companyDirectoryText: '',
+    ingestStatus: 'idle',
+    companies: [],
+    selectedCompanyIds: [],
+    prep: {},
+    fairMode: {
+      active: false,
+      startedAt: null,
+      companyState: {},
+    },
   }
 }
 
@@ -134,21 +177,10 @@ export const initialWizardState: WizardState = {
     experience: [],
     education: [],
   },
-  fair: {
-    eventName: '',
-    date: '',
-    location: '',
-    mapFileName: null,
-    companyListFileName: null,
-    companyDirectoryText: '',
-    status: 'idle',
-  },
-  companies: [],
-  selectedCompanyIds: [],
-  prep: {},
-  fairMode: {
-    active: false,
-    startedAt: null,
-    companyState: {},
-  },
+  // Seeded with one fair so the existing single-fair flow (Steps 3-6) keeps
+  // working unchanged until the dashboard UI for managing several exists.
+  // A fixed id (not crypto.randomUUID()) keeps this module-level constant
+  // deterministic between server/client evaluations.
+  fairProfiles: [createFairProfile({ id: 'default', name: '' })],
+  activeFairId: 'default',
 }

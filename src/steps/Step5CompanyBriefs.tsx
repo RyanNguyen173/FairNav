@@ -5,7 +5,7 @@ import { Button } from '../components/Button'
 import { Header } from '../components/Header'
 import { SectionCard, StepShell } from '../components/StepShell'
 import { STEP_ROUTES } from '../wizard/types'
-import { useWizard } from '../wizard/WizardContext'
+import { useActiveFair, useWizard } from '../wizard/WizardContext'
 
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false)
@@ -38,9 +38,9 @@ function CopyButton({ text }: { text: string }) {
 }
 
 export function Step5CompanyBriefs() {
-  const { state, dispatch, goBack } = useWizard()
+  const { dispatch, goBack } = useWizard()
   const router = useRouter()
-  const { companies, selectedCompanyIds, prep } = state
+  const { companies, selectedCompanyIds, prep } = useActiveFair()
   const enterFairMode = () => {
     dispatch({ type: 'ENTER_FAIR_MODE' })
     router.push(STEP_ROUTES[6])

@@ -11,7 +11,8 @@ export default function Home() {
   const router = useRouter()
 
   useEffect(() => {
-    const target = state.fairMode.active ? STEP_ROUTES[6] : (STEP_ROUTES[state.step] ?? STEP_ROUTES[1])
+    const activeFair = state.fairProfiles.find((fair) => fair.id === state.activeFairId)
+    const target = activeFair?.fairMode.active ? STEP_ROUTES[6] : (STEP_ROUTES[state.step] ?? STEP_ROUTES[1])
     router.replace(target)
     // Intentionally one-time on mount - this redirects to wherever the user
     // left off, it shouldn't re-fire every time wizard state changes.
