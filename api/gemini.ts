@@ -21,7 +21,7 @@ interface Res {
   status(code: number): { json(body: unknown): void }
 }
 
-const MODEL = 'gemini-flash-latest'
+const MODEL = 'gemini-3.1-flash-lite'
 
 type AiCompanyMatch = Omit<Company, 'id' | 'boothNumber' | 'x' | 'y'>
 
