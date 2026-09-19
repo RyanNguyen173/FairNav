@@ -1,4 +1,5 @@
-import { CaretLeft } from '@phosphor-icons/react'
+import { CaretLeft, SignOut, UserCircle } from '@phosphor-icons/react'
+import { useAuth } from '../auth/AuthContext'
 import { TOTAL_STEPS } from '../wizard/types'
 import { ThemeToggle } from './ThemeToggle'
 
@@ -6,6 +7,29 @@ interface HeaderProps {
   step: number
   stepLabel: string
   onBack?: () => void
+}
+
+/** Minimal stand-in for the spec's "User Profile Dropdown" - shows the
+ * signed-in email and a sign-out action. Renders nothing when there's no
+ * Supabase session (auth disabled or not configured). */
+function ProfileControl() {
+  const { session, signOut } = useAuth()
+  if (!session?.user?.email) return null
+
+  return (
+    <div className="hidden items-center gap-2 md:flex">
+      <UserCircle size={18} weight="fill" className="text-muted-foreground" aria-hidden="true" />
+      <span className="max-w-[160px] truncate text-sm text-muted-foreground">{session.user.email}</span>
+      <button
+        type="button"
+        onClick={() => signOut()}
+        aria-label="Sign out"
+        className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <SignOut size={16} weight="bold" aria-hidden="true" />
+      </button>
+    </div>
+  )
 }
 
 export function Header({ step, stepLabel, onBack }: HeaderProps) {
@@ -30,7 +54,10 @@ export function Header({ step, stepLabel, onBack }: HeaderProps) {
             {stepLabel} · Step {step} of {TOTAL_STEPS}
           </span>
         </div>
-        <ThemeToggle />
+        <div className="flex items-center gap-3">
+          <ProfileControl />
+          <ThemeToggle />
+        </div>
       </div>
 
       <div className="mx-auto max-w-md px-4 pb-3 pt-2.5 md:max-w-5xl md:px-8">

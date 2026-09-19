@@ -7,7 +7,13 @@ during the event with a live route map.
 
 Built for SASEhack 2026 — Social Impact and Design tracks.
 
-## Status: real AI backend, with a demo fallback
+## Status: real AI backend + zero-knowledge auth, with a demo fallback
+
+Accounts, encryption, and persistence (Supabase Auth + Postgres, AES-256-GCM
+client-side encryption) are live — see "Authentication & encryption" below.
+If `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` aren't set, the app skips
+auth entirely and runs the wizard directly (no bricked app during local UI
+work), same fallback philosophy as the AI calls below.
 
 Every AI step is its own Gemini-backed serverless function, each holding
 `GEMINI_API_KEY` server-side:
@@ -53,6 +59,10 @@ Three follow-ups are intentionally deferred and still open:
 - Phosphor icons (`@phosphor-icons/react`)
 - Gemini API (`@google/genai`), 4 separate Vercel serverless functions
   sharing helpers from `api/_lib/gemini.ts`
+- Supabase (`@supabase/supabase-js`) for email/password + magic-link auth
+  and Postgres storage of encrypted profile data
+- Web Crypto API (PBKDF2 + AES-256-GCM) for client-side encryption —
+  `src/lib/crypto.ts`, no dependency
 
 ## Running locally
 
@@ -62,8 +72,43 @@ npm run dev
 ```
 
 This runs the wizard in demo mode (the plain Vite dev server doesn't serve
-`/api/*` routes) — good enough for UI work, but AI calls will fall back to
-mock data.
+`/api/*` routes, and without Supabase env vars auth is skipped entirely) —
+good enough for UI work, but AI calls fall back to mock data.
+
+## Authentication & encryption
+
+Every user's profile, skills, extracted resume data, company matches,
+pitches, and fair-mode notes are encrypted **on their device** before ever
+touching the database — the server and database only ever see an opaque
+ciphertext blob (see `src/lib/crypto.ts` and `supabase/schema.sql`).
+
+**How it works:** signing up or in derives an AES-256-GCM key from the
+user's password via PBKDF2 (600,000 iterations, per OWASP's current
+guidance) and a random per-user salt. That key lives only in React state —
+never written to `localStorage`/`sessionStorage`/anywhere — so closing the
+tab forgets it and a fresh sign-in re-derives it identically. `WizardProvider`
+auto-saves the encrypted wizard state to Supabase on a 1.5s debounce.
+
+**A real constraint worth knowing:** the spec's magic-link (passwordless)
+option can't supply a password to derive a key from. Per the resolved
+design, magic link only re-establishes the *session* — the app then shows
+an "enter your password to unlock" prompt (`src/auth/AuthScreen.tsx`'s
+`UnlockPrompt`) before any encrypted data can be read. This keeps the
+zero-knowledge property intact for every account, at the cost of magic
+link not being a full passwordless experience.
+
+### Setup
+
+1. Create a free project at [supabase.com](https://supabase.com).
+2. In the SQL Editor, run `supabase/schema.sql` once (creates the
+   `profiles` table with Row Level Security — the anon key can only ever
+   read/write the signed-in user's own row).
+3. From Settings → API, copy the Project URL and anon public key into
+   `.env` as `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (see
+   `.env.example`). These are meant to ship in the client bundle — the
+   anon key's access is enforced by the database's RLS policies, not by
+   secrecy.
+4. For deployment, set the same two variables in Vercel's project settings.
 
 ## Using the real AI backend
 
@@ -97,7 +142,12 @@ api/
   parse-directory.ts     Exhibitor directory -> company + booth number pairs
   rank-companies.ts      Parsed booths + profile -> ranked companies
   generate-pitches.ts    Selected companies + profile -> pitch + questions per company
+supabase/
+  schema.sql     Run once in the Supabase SQL Editor - profiles table + RLS
 src/
+  auth/          AuthContext (Supabase session + encryption key lifecycle),
+                 AuthScreen (Page 0: sign in/up, magic link, unlock prompt)
+  lib/           supabaseClient.ts, crypto.ts (PBKDF2 + AES-256-GCM, no deps)
   theme/         Light/dark theme context (persists to localStorage)
   wizard/        Wizard state (reducer), types, aiEngine (real calls) and
                  mockEngine (demo fallback data)

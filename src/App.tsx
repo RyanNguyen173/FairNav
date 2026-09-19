@@ -1,5 +1,8 @@
+import { AuthProvider, useAuth } from './auth/AuthContext'
+import { AuthScreen } from './auth/AuthScreen'
 import { ThemeProvider } from './theme/ThemeContext'
 import { WizardProvider, useWizard } from './wizard/WizardContext'
+import type { WizardState } from './wizard/types'
 import { Step1ResumeUpload } from './steps/Step1ResumeUpload'
 import { Step2ProfileEditor } from './steps/Step2ProfileEditor'
 import { Step3FairIngestion } from './steps/Step3FairIngestion'
@@ -28,12 +31,25 @@ function WizardRouter() {
   }
 }
 
+/** Shows the auth screen until signed in AND the encryption key is unlocked. */
+function AuthGate() {
+  const { isUnlocked, hydratedState } = useAuth()
+
+  if (!isUnlocked) return <AuthScreen />
+
+  return (
+    <WizardProvider initialState={hydratedState as Partial<WizardState> | null}>
+      <WizardRouter />
+    </WizardProvider>
+  )
+}
+
 function App() {
   return (
     <ThemeProvider>
-      <WizardProvider>
-        <WizardRouter />
-      </WizardProvider>
+      <AuthProvider>
+        <AuthGate />
+      </AuthProvider>
     </ThemeProvider>
   )
 }

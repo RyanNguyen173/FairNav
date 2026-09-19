@@ -2,10 +2,14 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useReducer,
   type ReactNode,
 } from 'react'
+import { useAuth } from '../auth/AuthContext'
+import { encryptJSON } from '../lib/crypto'
+import { supabase } from '../lib/supabaseClient'
 import {
   initialWizardState,
   TOTAL_STEPS,
@@ -16,6 +20,9 @@ import {
   type TargetPosition,
   type WizardState,
 } from './types'
+
+/** Debounce so we don't hit the database on every keystroke. */
+const AUTOSAVE_DELAY_MS = 1500
 
 type Action =
   | { type: 'GO_TO_STEP'; step: number }
@@ -198,8 +205,40 @@ interface WizardContextValue {
 
 const WizardContext = createContext<WizardContextValue | null>(null)
 
-export function WizardProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(reducer, initialWizardState)
+interface WizardProviderProps {
+  children: ReactNode
+  /** Decrypted state from sign-in, to resume where the user left off. */
+  initialState?: Partial<WizardState> | null
+}
+
+export function WizardProvider({ children, initialState }: WizardProviderProps) {
+  const [state, dispatch] = useReducer(
+    reducer,
+    initialState ? { ...initialWizardState, ...initialState } : initialWizardState,
+  )
+  const { session, encryptionKey } = useAuth()
+
+  // Auto-save: encrypt the whole wizard state client-side and upsert the
+  // ciphertext whenever it changes, debounced. The server only ever sees
+  // opaque bytes - see src/lib/crypto.ts and supabase/schema.sql.
+  useEffect(() => {
+    if (!session?.user || !encryptionKey) return
+
+    const timeout = setTimeout(async () => {
+      try {
+        const { ciphertext, iv } = await encryptJSON(encryptionKey, state)
+        const { error } = await supabase
+          .from('profiles')
+          .update({ ciphertext, iv, updated_at: new Date().toISOString() })
+          .eq('user_id', session.user.id)
+        if (error) console.warn('Failed to save encrypted profile:', error)
+      } catch (error) {
+        console.warn('Failed to encrypt/save profile:', error)
+      }
+    }, AUTOSAVE_DELAY_MS)
+
+    return () => clearTimeout(timeout)
+  }, [state, session, encryptionKey])
 
   const goNext = useCallback(() => {
     dispatch({ type: 'GO_TO_STEP', step: state.step + 1 })
