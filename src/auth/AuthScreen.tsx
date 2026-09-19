@@ -86,7 +86,7 @@ function UnlockPrompt() {
 }
 
 export function AuthScreen() {
-  const { session, isUnlocked, loading, error, clearError, signUp, signIn } = useAuth()
+  const { session, isUnlocked, authenticating, loading, error, clearError, signUp, signIn } = useAuth()
   const [mode, setMode] = useState<Mode>('signin')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -95,7 +95,7 @@ export function AuthScreen() {
   const [submitting, setSubmitting] = useState(false)
   const [infoMessage, setInfoMessage] = useState<string | null>(null)
 
-  if (loading) {
+  if (loading || (session && !isUnlocked && authenticating)) {
     return <div className="flex min-h-dvh items-center justify-center text-sm text-muted-foreground">Loading…</div>
   }
 

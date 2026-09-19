@@ -59,6 +59,14 @@ interface AuthContextValue {
   /** Signed in AND the encryption key has been derived - data can be read/written. */
   isUnlocked: boolean
   /**
+   * True for the brief window during signIn/signUp between Supabase
+   * establishing the session (which flips `session` truthy via
+   * onAuthStateChange) and the encryption key finishing derivation. Lets
+   * the UI avoid flashing the "enter your password to unlock" prompt for a
+   * password the user just submitted seconds ago.
+   */
+  authenticating: boolean
+  /**
    * The decrypted wizard state from the moment of unlock (null for a
    * brand-new account with nothing saved yet). Read once, at the point the
    * wizard mounts, to seed its initial state - see WizardProvider's
@@ -82,6 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [encryptionKey, setEncryptionKey] = useState<CryptoKey | null>(null)
   const [hydratedState, setHydratedState] = useState<unknown>(null)
+  const [authenticating, setAuthenticating] = useState(false)
   // No Supabase project configured - nothing to wait on, so start "not
   // loading" directly rather than flipping it inside the effect below.
   // AuthGate treats isUnlocked as permanently true in this case (see below).
@@ -109,36 +118,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signUp = useCallback(async (email: string, password: string, remember: boolean) => {
     setRememberMe(remember)
     setError(null)
-    const { data, error: signUpError } = await supabase.auth.signUp({ email, password })
-    if (signUpError) {
-      setError(signUpError.message)
-      return { needsEmailConfirmation: false }
+    setAuthenticating(true)
+    try {
+      const { data, error: signUpError } = await supabase.auth.signUp({ email, password })
+      if (signUpError) {
+        setError(signUpError.message)
+        return { needsEmailConfirmation: false }
+      }
+      if (data.session && data.user) {
+        const { key } = await unlockOrInitProfile(data.user.id, password)
+        setEncryptionKey(key)
+        setHydratedState(null)
+        return { needsEmailConfirmation: false }
+      }
+      // This project requires email confirmation - no session yet. The
+      // profile row gets created on first signIn() after they confirm.
+      return { needsEmailConfirmation: true }
+    } finally {
+      setAuthenticating(false)
     }
-    if (data.session && data.user) {
-      const { key } = await unlockOrInitProfile(data.user.id, password)
-      setEncryptionKey(key)
-      setHydratedState(null)
-      return { needsEmailConfirmation: false }
-    }
-    // This project requires email confirmation - no session yet. The
-    // profile row gets created on first signIn() after they confirm.
-    return { needsEmailConfirmation: true }
   }, [])
 
   const signIn = useCallback(async (email: string, password: string, remember: boolean) => {
     setRememberMe(remember)
     setError(null)
-    const { data, error: signInError } = await supabase.auth.signInWithPassword({ email, password })
-    if (signInError) {
-      setError(signInError.message)
-      return
-    }
+    setAuthenticating(true)
     try {
-      const { key, wizardState } = await unlockOrInitProfile(data.user.id, password)
-      setEncryptionKey(key)
-      setHydratedState(wizardState)
-    } catch {
-      setError('Could not unlock your data with that password.')
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({ email, password })
+      if (signInError) {
+        setError(signInError.message)
+        return
+      }
+      try {
+        const { key, wizardState } = await unlockOrInitProfile(data.user.id, password)
+        setEncryptionKey(key)
+        setHydratedState(wizardState)
+      } catch {
+        setError('Could not unlock your data with that password.')
+      }
+    } finally {
+      setAuthenticating(false)
     }
   }, [])
 
@@ -170,6 +189,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       session,
       encryptionKey,
       isUnlocked: !isSupabaseConfigured || Boolean(session && encryptionKey),
+      authenticating,
       hydratedState,
       loading,
       error,
@@ -179,7 +199,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       unlockWithPassword,
       signOut,
     }),
-    [session, encryptionKey, hydratedState, loading, error, clearError, signUp, signIn, unlockWithPassword, signOut],
+    [
+      session,
+      encryptionKey,
+      authenticating,
+      hydratedState,
+      loading,
+      error,
+      clearError,
+      signUp,
+      signIn,
+      unlockWithPassword,
+      signOut,
+    ],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
