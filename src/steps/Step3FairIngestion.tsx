@@ -1,0 +1,120 @@
+import { useState } from 'react'
+import { Button } from '../components/Button'
+import { Header } from '../components/Header'
+import { FieldLabel, SectionCard, StepShell, TextInput } from '../components/StepShell'
+import { UploadDropzone } from '../components/UploadDropzone'
+import { mockAnalyzeFair } from '../wizard/mockEngine'
+import { useWizard } from '../wizard/WizardContext'
+
+export function Step3FairIngestion() {
+  const { state, dispatch, goNext, goBack } = useWizard()
+  const { fair, profile } = state
+  const [directoryMode, setDirectoryMode] = useState<'paste' | 'upload'>('paste')
+
+  const canAnalyze = fair.eventName.trim().length > 0 && fair.status !== 'working'
+
+  const handleAnalyze = async () => {
+    dispatch({ type: 'FAIR_ANALYZING' })
+    const companies = await mockAnalyzeFair(fair.companyDirectoryText, fair.companyListFileName, profile)
+    dispatch({ type: 'COMPANIES_MATCHED', companies })
+    goNext()
+  }
+
+  return (
+    <>
+      <Header step={3} stepLabel="Fair details &amp; map" onBack={goBack} />
+      <StepShell
+        footer={
+          <Button fullWidth disabled={!canAnalyze} loading={fair.status === 'working'} onClick={handleAnalyze}>
+            Analyze Fair &amp; Match Companies
+          </Button>
+        }
+      >
+        <p className="mb-5 text-sm text-muted-foreground">
+          Tell us about the fair so we can rank attending companies against your profile.
+        </p>
+
+        <SectionCard className="mb-6 space-y-4">
+          <div>
+            <FieldLabel htmlFor="eventName">Event name</FieldLabel>
+            <TextInput
+              id="eventName"
+              value={fair.eventName}
+              placeholder="e.g. STEM Connect Career Fair"
+              onChange={(event) => dispatch({ type: 'SET_FAIR_FIELD', field: 'eventName', value: event.target.value })}
+            />
+          </div>
+          <div>
+            <FieldLabel htmlFor="date">Date</FieldLabel>
+            <TextInput
+              id="date"
+              type="date"
+              value={fair.date}
+              onChange={(event) => dispatch({ type: 'SET_FAIR_FIELD', field: 'date', value: event.target.value })}
+            />
+          </div>
+          <div>
+            <FieldLabel htmlFor="location">Location</FieldLabel>
+            <TextInput
+              id="location"
+              value={fair.location}
+              placeholder="e.g. Seattle Convention Center"
+              onChange={(event) => dispatch({ type: 'SET_FAIR_FIELD', field: 'location', value: event.target.value })}
+            />
+          </div>
+        </SectionCard>
+
+        <div className="mb-6">
+          <UploadDropzone
+            label="Booth map"
+            helperText="Upload the fair's physical layout as an image or PDF."
+            accept="image/*,.pdf"
+            fileName={fair.mapFileName}
+            onFile={(file) => dispatch({ type: 'SET_MAP_FILE', fileName: file.name })}
+          />
+        </div>
+
+        <div>
+          <FieldLabel htmlFor="directory">Company directory</FieldLabel>
+          <div className="mb-3 grid grid-cols-2 gap-2 rounded-xl bg-muted p-1">
+            {(['paste', 'upload'] as const).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => setDirectoryMode(mode)}
+                className={[
+                  'min-h-9 cursor-pointer rounded-lg text-sm font-semibold transition-colors duration-150',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                  directoryMode === mode ? 'bg-card text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground',
+                ].join(' ')}
+              >
+                {mode === 'paste' ? 'Paste text' : 'Upload file'}
+              </button>
+            ))}
+          </div>
+
+          {directoryMode === 'paste' ? (
+            <textarea
+              id="directory"
+              rows={5}
+              value={fair.companyDirectoryText}
+              placeholder={'One company per line, e.g.\nNorthwind Analytics\nBrightloop\nVerdant Finance'}
+              onChange={(event) =>
+                dispatch({ type: 'SET_COMPANY_DIRECTORY_TEXT', value: event.target.value })
+              }
+              className="w-full rounded-xl border border-border bg-card px-3.5 py-3 text-[15px] text-card-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
+          ) : (
+            <UploadDropzone
+              label="Company list file"
+              helperText="PDF or CSV listing attending companies."
+              accept=".pdf,.csv"
+              fileName={fair.companyListFileName}
+              onFile={(file) => dispatch({ type: 'SET_COMPANY_LIST_FILE', fileName: file.name })}
+            />
+          )}
+        </div>
+      </StepShell>
+    </>
+  )
+}
