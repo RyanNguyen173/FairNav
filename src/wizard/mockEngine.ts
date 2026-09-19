@@ -43,7 +43,7 @@ const UNIVERSITY_POOL = [
   'Arizona State University',
 ]
 
-const SKILL_POOL = [
+export const SKILL_POOL = [
   'Python',
   'React',
   'SQL',
@@ -61,7 +61,7 @@ const SKILL_POOL = [
   'Salesforce',
 ]
 
-const INTEREST_POOL = [
+export const INTEREST_POOL = [
   'Software Engineering',
   'Product Management',
   'Data Science',
@@ -188,10 +188,6 @@ function toTitleCase(value: string) {
 
 function randomDigits(length: number) {
   return Array.from({ length }, () => Math.floor(Math.random() * 10)).join('')
-}
-
-export function suggestedInterests(): string[] {
-  return pickRandom(INTEREST_POOL, 6)
 }
 
 interface CompanyTemplate {

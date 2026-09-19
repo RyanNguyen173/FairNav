@@ -4,9 +4,101 @@ import { Button } from '../components/Button'
 import { Chip } from '../components/Chip'
 import { Header } from '../components/Header'
 import { FieldLabel, SectionCard, StepShell, TextInput } from '../components/StepShell'
-import { suggestedInterests } from '../wizard/mockEngine'
+import { INTEREST_POOL, SKILL_POOL } from '../wizard/mockEngine'
 import type { Education, WorkExperience } from '../wizard/types'
 import { useWizard } from '../wizard/WizardContext'
+
+/** Chip list + free-text input with a type-ahead dropdown of matching options. */
+function TagPicker({
+  label,
+  inputId,
+  selected,
+  options,
+  placeholder,
+  onAdd,
+  onRemove,
+}: {
+  label: string
+  inputId: string
+  selected: string[]
+  options: string[]
+  placeholder: string
+  onAdd: (value: string) => void
+  onRemove: (value: string) => void
+}) {
+  const [query, setQuery] = useState('')
+  const [open, setOpen] = useState(false)
+
+  const suggestions = query.trim()
+    ? options
+        .filter(
+          (option) =>
+            option.toLowerCase().includes(query.trim().toLowerCase()) &&
+            !selected.some((value) => value.toLowerCase() === option.toLowerCase()),
+        )
+        .slice(0, 6)
+    : []
+
+  const commit = (value: string) => {
+    const trimmed = value.trim()
+    if (!trimmed) return
+    if (!selected.some((existing) => existing.toLowerCase() === trimmed.toLowerCase())) onAdd(trimmed)
+    setQuery('')
+    setOpen(false)
+  }
+
+  return (
+    <div>
+      <FieldLabel htmlFor={inputId}>{label}</FieldLabel>
+      <div className="mb-3 flex flex-wrap gap-2">
+        {selected.length === 0 && <p className="text-sm text-muted-foreground">None yet — add some below.</p>}
+        {selected.map((value) => (
+          <Chip key={value} label={value} onRemove={() => onRemove(value)} />
+        ))}
+      </div>
+      <div className="relative">
+        <TextInput
+          id={inputId}
+          value={query}
+          placeholder={placeholder}
+          autoComplete="off"
+          onChange={(event) => {
+            setQuery(event.target.value)
+            setOpen(true)
+          }}
+          onFocus={() => setOpen(true)}
+          onBlur={() => setOpen(false)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') {
+              event.preventDefault()
+              commit(query)
+            } else if (event.key === 'Escape') {
+              setOpen(false)
+            }
+          }}
+        />
+        {open && suggestions.length > 0 && (
+          <ul className="absolute z-10 mt-1 w-full overflow-hidden rounded-xl border border-border bg-card py-1 shadow-lg">
+            {suggestions.map((option) => (
+              <li key={option}>
+                <button
+                  type="button"
+                  onMouseDown={(event) => {
+                    event.preventDefault()
+                    commit(option)
+                  }}
+                  className="block w-full cursor-pointer px-3.5 py-2 text-left text-[15px] text-card-foreground hover:bg-muted"
+                >
+                  {option}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  )
+}
 
 function EntryCard({ title, onRemove, children }: { title: string; onRemove: () => void; children: React.ReactNode }) {
   return (
@@ -250,16 +342,6 @@ function EducationEditor({ entries }: { entries: Education[] }) {
 export function Step2ProfileEditor() {
   const { state, dispatch, goNext, goBack } = useWizard()
   const { profile } = state
-  const [customTag, setCustomTag] = useState('')
-  const [suggestedOptions] = useState(() => suggestedInterests())
-  const interestOptions = Array.from(new Set([...suggestedOptions, ...profile.interests])).slice(0, 8)
-
-  const addCustomSkill = () => {
-    const trimmed = customTag.trim()
-    if (!trimmed) return
-    dispatch({ type: 'ADD_SKILL', skill: trimmed })
-    setCustomTag('')
-  }
 
   return (
     <>
@@ -277,55 +359,27 @@ export function Step2ProfileEditor() {
 
         <div className="md:grid md:grid-cols-2 md:items-start md:gap-8">
           <SectionCard className="mb-6 md:mb-0">
-            <FieldLabel htmlFor="skills-input">Extracted skills</FieldLabel>
-            <div className="mb-3 flex flex-wrap gap-2">
-              {profile.skills.length === 0 && (
-                <p className="text-sm text-muted-foreground">No skills yet — add some below.</p>
-              )}
-              {profile.skills.map((skill) => (
-                <Chip key={skill} label={skill} onRemove={() => dispatch({ type: 'REMOVE_SKILL', skill })} />
-              ))}
-            </div>
-            <div className="flex gap-2">
-              <TextInput
-                id="skills-input"
-                value={customTag}
-                placeholder="Add a custom skill"
-                onChange={(event) => setCustomTag(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter') {
-                    event.preventDefault()
-                    addCustomSkill()
-                  }
-                }}
-              />
-              <Button variant="secondary" icon={<Plus size={16} weight="bold" aria-hidden="true" />} onClick={addCustomSkill}>
-                Add
-              </Button>
-            </div>
+            <TagPicker
+              label="Extracted skills"
+              inputId="skills-input"
+              selected={profile.skills}
+              options={SKILL_POOL}
+              placeholder="Add a skill"
+              onAdd={(skill) => dispatch({ type: 'ADD_SKILL', skill })}
+              onRemove={(skill) => dispatch({ type: 'REMOVE_SKILL', skill })}
+            />
           </SectionCard>
 
           <SectionCard>
-            <FieldLabel htmlFor="interests">Focus &amp; industry interests</FieldLabel>
-            <div id="interests" className="flex flex-wrap gap-2">
-              {interestOptions.map((interest) => {
-                const selected = profile.interests.includes(interest)
-                return (
-                  <Chip
-                    key={interest}
-                    label={interest}
-                    selected={selected}
-                    onClick={() =>
-                      dispatch(
-                        selected
-                          ? { type: 'REMOVE_INTEREST', interest }
-                          : { type: 'ADD_INTEREST', interest },
-                      )
-                    }
-                  />
-                )
-              })}
-            </div>
+            <TagPicker
+              label="Focus & industry interests"
+              inputId="interests-input"
+              selected={profile.interests}
+              options={INTEREST_POOL}
+              placeholder="Add an interest"
+              onAdd={(interest) => dispatch({ type: 'ADD_INTEREST', interest })}
+              onRemove={(interest) => dispatch({ type: 'REMOVE_INTEREST', interest })}
+            />
           </SectionCard>
         </div>
 
