@@ -22,7 +22,7 @@ interface Res {
   status(code: number): { json(body: unknown): void }
 }
 
-const MODEL = 'gemini-3.1-flash-lite'
+const MODEL = 'gemini-3.5-flash-lite'
 
 type AiCompanyMatch = Omit<Company, 'id' | 'x' | 'y'>
 
