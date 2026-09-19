@@ -1,4 +1,4 @@
-import { CheckCircle, LockKey } from '@phosphor-icons/react'
+import { CheckCircle, DeviceMobile, LockKey } from '@phosphor-icons/react'
 import { useState } from 'react'
 import { Button } from '../components/Button'
 import { PasswordChecklist } from '../components/PasswordChecklist'
@@ -14,6 +14,14 @@ const FEATURES = [
   'AI-generated elevator pitches, tailored per company',
   'A live booth-by-booth route for the day of the fair',
 ]
+
+// E.164: a leading "+", then 8-15 digits total, first digit non-zero.
+// Supabase's phone auth requires this format for both signup and OTP verification.
+const PHONE_PATTERN = /^\+[1-9]\d{7,14}$/
+
+function isValidPhone(phone: string): boolean {
+  return PHONE_PATTERN.test(phone.trim())
+}
 
 function UnlockPrompt() {
   const { unlockWithPassword, error, clearError, signOut } = useAuth()
@@ -74,18 +82,115 @@ function UnlockPrompt() {
   )
 }
 
+/** Shown right after signup (or a signin attempt on a never-verified account) until the SMS code is confirmed. */
+function PhoneVerificationForm() {
+  const { pendingPhoneVerification, verifyPhoneCode, resendVerificationCode, cancelPhoneVerification, error, clearError } =
+    useAuth()
+  const [code, setCode] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [resending, setResending] = useState(false)
+  const [resent, setResent] = useState(false)
+
+  const handleSubmit = async () => {
+    if (!code.trim() || submitting) return
+    clearError()
+    setSubmitting(true)
+    try {
+      await verifyPhoneCode(code.trim())
+    } catch {
+      // verifyPhoneCode already sets a user-facing error message.
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleResend = async () => {
+    clearError()
+    setResending(true)
+    try {
+      await resendVerificationCode()
+      setResent(true)
+      setTimeout(() => setResent(false), 4000)
+    } catch {
+      // resendVerificationCode already sets a user-facing error message.
+    } finally {
+      setResending(false)
+    }
+  }
+
+  return (
+    <div className="w-full max-w-sm">
+      <div className="mb-6 flex flex-col items-center text-center">
+        <DeviceMobile size={28} weight="fill" className="mb-3 text-primary" aria-hidden="true" />
+        <h1 className="mb-1 text-lg font-bold text-foreground">Verify your phone</h1>
+        <p className="text-sm text-muted-foreground">
+          We texted a 6-digit code to {pendingPhoneVerification}. Enter it below to finish creating your account.
+        </p>
+      </div>
+
+      <div className="mb-4">
+        <FieldLabel htmlFor="otp-code">Verification code</FieldLabel>
+        <TextInput
+          id="otp-code"
+          inputMode="numeric"
+          autoComplete="one-time-code"
+          placeholder="123456"
+          value={code}
+          onChange={(event) => setCode(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' && code.trim()) handleSubmit()
+          }}
+        />
+      </div>
+
+      {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
+      {resent && <p className="mb-4 text-sm text-success">Code resent.</p>}
+
+      <Button fullWidth disabled={!code.trim() || submitting} loading={submitting} onClick={handleSubmit}>
+        Verify &amp; Continue
+      </Button>
+
+      <div className="mt-4 flex items-center justify-between text-sm">
+        <button
+          type="button"
+          onClick={handleResend}
+          disabled={resending}
+          className="cursor-pointer font-medium text-primary hover:underline disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Resend code
+        </button>
+        <button
+          type="button"
+          onClick={cancelPhoneVerification}
+          className="cursor-pointer font-medium text-muted-foreground hover:text-foreground"
+        >
+          Use a different number
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export function AuthScreen() {
-  const { session, isUnlocked, authenticating, loading, error, clearError, signUp, signIn } = useAuth()
+  const { session, isUnlocked, authenticating, loading, error, clearError, signUp, signIn, pendingPhoneVerification } =
+    useAuth()
   const [mode, setMode] = useState<Mode>('signin')
-  const [email, setEmail] = useState('')
+  const [phone, setPhone] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [remember, setRemember] = useState(true)
   const [submitting, setSubmitting] = useState(false)
-  const [infoMessage, setInfoMessage] = useState<string | null>(null)
 
   if (loading || (session && !isUnlocked && authenticating)) {
     return <div className="flex min-h-dvh items-center justify-center text-sm text-muted-foreground">Loading…</div>
+  }
+
+  if (pendingPhoneVerification) {
+    return (
+      <div className="flex min-h-dvh flex-col items-center justify-center px-4">
+        <PhoneVerificationForm />
+      </div>
+    )
   }
 
   if (session && !isUnlocked) {
@@ -95,22 +200,19 @@ export function AuthScreen() {
   const confirmMismatch = mode === 'signup' && confirmPassword.length > 0 && password !== confirmPassword
   const canSubmit =
     mode === 'signin'
-      ? email.length > 3 && password.length > 0
-      : email.length > 3 && isPasswordValid(password) && password === confirmPassword
+      ? isValidPhone(phone) && password.length > 0
+      : isValidPhone(phone) && isPasswordValid(password) && password === confirmPassword
 
   const handleSubmit = async () => {
     if (!canSubmit || submitting) return
     clearError()
-    setInfoMessage(null)
     setSubmitting(true)
     try {
+      const normalizedPhone = phone.trim()
       if (mode === 'signup') {
-        const { needsEmailConfirmation } = await signUp(email, password, remember)
-        if (needsEmailConfirmation) {
-          setInfoMessage('Check your email to confirm your account, then sign in.')
-        }
+        await signUp(normalizedPhone, password, remember)
       } else {
-        await signIn(email, password, remember)
+        await signIn(normalizedPhone, password, remember)
       }
     } finally {
       setSubmitting(false)
@@ -151,7 +253,6 @@ export function AuthScreen() {
                   onClick={() => {
                     setMode(value)
                     clearError()
-                    setInfoMessage(null)
                   }}
                   className={[
                     'min-h-9 cursor-pointer rounded-lg text-sm font-semibold transition-colors duration-150',
@@ -165,14 +266,18 @@ export function AuthScreen() {
             </div>
 
             <div className="mb-4">
-              <FieldLabel htmlFor="email">Email address</FieldLabel>
+              <FieldLabel htmlFor="phone">Phone number</FieldLabel>
               <TextInput
-                id="email"
-                type="email"
-                autoComplete="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
+                id="phone"
+                type="tel"
+                autoComplete="tel"
+                placeholder="+1 555 123 4567"
+                value={phone}
+                onChange={(event) => setPhone(event.target.value)}
               />
+              <p className="mt-1.5 text-xs text-muted-foreground">
+                Include your country code (e.g. +1 for the US) - we&apos;ll text you a verification code.
+              </p>
             </div>
 
             <div className="mb-4">
@@ -212,7 +317,6 @@ export function AuthScreen() {
             </label>
 
             {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
-            {infoMessage && <p className="mb-4 text-sm text-success">{infoMessage}</p>}
 
             <Button fullWidth disabled={!canSubmit || submitting} loading={submitting} onClick={handleSubmit}>
               Unlock FairNav Engine

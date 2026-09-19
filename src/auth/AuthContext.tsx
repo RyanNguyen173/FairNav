@@ -5,6 +5,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react'
@@ -76,9 +77,22 @@ interface AuthContextValue {
   loading: boolean
   error: string | null
   clearError: () => void
-  /** Returns whether this project requires confirming the email before a session exists. */
-  signUp: (email: string, password: string, remember: boolean) => Promise<{ needsEmailConfirmation: boolean }>
-  signIn: (email: string, password: string, remember: boolean) => Promise<void>
+  /**
+   * The phone number awaiting an SMS code, set right after signUp() (or
+   * after signIn() hits an unconfirmed account) and cleared once
+   * verifyPhoneCode succeeds or verificationCancelled is called. Non-null
+   * means the UI should show the code-entry screen instead of anything else.
+   */
+  pendingPhoneVerification: string | null
+  /** Submits the 6-digit SMS code for pendingPhoneVerification and finishes unlocking. */
+  verifyPhoneCode: (code: string) => Promise<void>
+  /** Re-sends the SMS code to pendingPhoneVerification. */
+  resendVerificationCode: () => Promise<void>
+  /** Abandons phone verification and returns to the sign-up form. */
+  cancelPhoneVerification: () => void
+  /** Returns whether a verification code was just sent and must be entered before the account is usable. */
+  signUp: (phone: string, password: string, remember: boolean) => Promise<{ needsVerification: boolean }>
+  signIn: (phone: string, password: string, remember: boolean) => Promise<void>
   /** For a restored session (page reload) that has no password on hand yet. */
   unlockWithPassword: (password: string) => Promise<void>
   signOut: () => Promise<void>
@@ -91,11 +105,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [encryptionKey, setEncryptionKey] = useState<CryptoKey | null>(null)
   const [hydratedState, setHydratedState] = useState<unknown>(null)
   const [authenticating, setAuthenticating] = useState(false)
+  const [pendingPhoneVerification, setPendingPhoneVerification] = useState<string | null>(null)
   // No Supabase project configured - nothing to wait on, so start "not
   // loading" directly rather than flipping it inside the effect below.
   // AuthGate treats isUnlocked as permanently true in this case (see below).
   const [loading, setLoading] = useState(isSupabaseConfigured)
   const [error, setError] = useState<string | null>(null)
+
+  // The password never gets persisted anywhere (by design - see crypto.ts),
+  // but between signUp() sending the SMS and verifyPhoneCode() finishing,
+  // we need the SAME password on hand to derive the encryption key right
+  // after verification succeeds. Held only in memory, cleared as soon as
+  // it's used or verification is cancelled.
+  const pendingPasswordRef = useRef<string | null>(null)
 
   useEffect(() => {
     if (!isSupabaseConfigured) return
@@ -115,38 +137,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const clearError = useCallback(() => setError(null), [])
 
-  const signUp = useCallback(async (email: string, password: string, remember: boolean) => {
+  const signUp = useCallback(async (phone: string, password: string, remember: boolean) => {
     setRememberMe(remember)
     setError(null)
     setAuthenticating(true)
     try {
-      const { data, error: signUpError } = await supabase.auth.signUp({ email, password })
+      const { data, error: signUpError } = await supabase.auth.signUp({ phone, password })
       if (signUpError) {
         setError(signUpError.message)
-        return { needsEmailConfirmation: false }
+        return { needsVerification: false }
       }
       if (data.session && data.user) {
         const { key } = await unlockOrInitProfile(data.user.id, password)
         setEncryptionKey(key)
         setHydratedState(null)
-        return { needsEmailConfirmation: false }
+        return { needsVerification: false }
       }
-      // This project requires email confirmation - no session yet. The
-      // profile row gets created on first signIn() after they confirm.
-      return { needsEmailConfirmation: true }
+      // Phone confirmation is required - no session yet. Hold the password
+      // in memory so verifyPhoneCode can unlock immediately once the SMS
+      // code is confirmed; the profile row gets created there.
+      pendingPasswordRef.current = password
+      setPendingPhoneVerification(phone)
+      return { needsVerification: true }
     } finally {
       setAuthenticating(false)
     }
   }, [])
 
-  const signIn = useCallback(async (email: string, password: string, remember: boolean) => {
+  const signIn = useCallback(async (phone: string, password: string, remember: boolean) => {
     setRememberMe(remember)
     setError(null)
     setAuthenticating(true)
     try {
-      const { data, error: signInError } = await supabase.auth.signInWithPassword({ email, password })
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({ phone, password })
       if (signInError) {
-        setError(signInError.message)
+        if (signInError.code === 'phone_not_confirmed') {
+          // They started signing up before, never entered the code, and are
+          // now back - resume verification instead of a dead-end error.
+          pendingPasswordRef.current = password
+          setPendingPhoneVerification(phone)
+          await supabase.auth.resend({ type: 'sms', phone })
+        } else {
+          setError(signInError.message)
+        }
         return
       }
       try {
@@ -159,6 +192,53 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setAuthenticating(false)
     }
+  }, [])
+
+  const verifyPhoneCode = useCallback(
+    async (code: string) => {
+      if (!pendingPhoneVerification) throw new Error('No phone verification in progress')
+      const password = pendingPasswordRef.current
+      if (!password) throw new Error('No password on hand to unlock with')
+
+      setError(null)
+      const { data, error: verifyError } = await supabase.auth.verifyOtp({
+        phone: pendingPhoneVerification,
+        token: code,
+        type: 'sms',
+      })
+      if (verifyError || !data.user) {
+        setError(verifyError?.message ?? 'Could not verify that code. Please try again.')
+        throw verifyError ?? new Error('Verification succeeded without a user')
+      }
+
+      try {
+        const { key, wizardState } = await unlockOrInitProfile(data.user.id, password)
+        setEncryptionKey(key)
+        setHydratedState(wizardState)
+        setPendingPhoneVerification(null)
+        pendingPasswordRef.current = null
+      } catch (err) {
+        setError('Verified, but could not unlock your data. Please try signing in again.')
+        throw err
+      }
+    },
+    [pendingPhoneVerification],
+  )
+
+  const resendVerificationCode = useCallback(async () => {
+    if (!pendingPhoneVerification) throw new Error('No phone verification in progress')
+    setError(null)
+    const { error: resendError } = await supabase.auth.resend({ type: 'sms', phone: pendingPhoneVerification })
+    if (resendError) {
+      setError(resendError.message)
+      throw resendError
+    }
+  }, [pendingPhoneVerification])
+
+  const cancelPhoneVerification = useCallback(() => {
+    setPendingPhoneVerification(null)
+    pendingPasswordRef.current = null
+    setError(null)
   }, [])
 
   const unlockWithPassword = useCallback(
@@ -182,6 +262,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setEncryptionKey(null)
     setHydratedState(null)
     setSession(null)
+    setPendingPhoneVerification(null)
+    pendingPasswordRef.current = null
   }, [])
 
   const value = useMemo<AuthContextValue>(
@@ -194,6 +276,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       error,
       clearError,
+      pendingPhoneVerification,
+      verifyPhoneCode,
+      resendVerificationCode,
+      cancelPhoneVerification,
       signUp,
       signIn,
       unlockWithPassword,
@@ -207,6 +293,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       error,
       clearError,
+      pendingPhoneVerification,
+      verifyPhoneCode,
+      resendVerificationCode,
+      cancelPhoneVerification,
       signUp,
       signIn,
       unlockWithPassword,
