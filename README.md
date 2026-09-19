@@ -84,28 +84,12 @@ pitches, and fair-mode notes are encrypted **on their device** before ever
 touching the database — the server and database only ever see an opaque
 ciphertext blob (see `src/lib/crypto.ts` and `supabase/schema.sql`).
 
-**How it works:** each account has one random Data Encryption Key (DEK) that
-directly encrypts the wizard state and never changes. The DEK itself is
-wrapped (encrypted) twice — once by a key derived from the user's password
-via PBKDF2 (600,000 iterations, per OWASP's current guidance), once by a key
-derived from a one-time recovery code shown right after signup. Signing in
-derives the password key, unwraps the DEK with it, and uses the DEK to
-decrypt everything. None of these keys are ever written to
-`localStorage`/`sessionStorage`/anywhere — they live only in React state —
-so closing the tab forgets them and a fresh sign-in re-derives them
-identically. `WizardProvider` auto-saves the encrypted wizard state to
-Supabase on a 1.5s debounce.
-
-**Password reset:** because the DEK never changes, resetting a password
-(`ForgotPasswordForm` → Supabase's reset email → `ResetPasswordScreen`) only
-re-wraps the same DEK under a new password-derived key, using the recovery
-code to unwrap it first — the underlying data is never touched or
-re-encrypted, so it survives the reset. Losing both the password and the
-recovery code means that account's data is genuinely unrecoverable; that's
-inherent to zero-knowledge encryption, not a bug. See
-`src/lib/crypto.ts` (`wrapKey`/`unwrapKey`/`generateRecoveryKey`) and
-`src/auth/AuthContext.tsx` for the full mechanics, including the lazy,
-one-time migration of accounts created before this model existed.
+**How it works:** signing up or in derives an AES-256-GCM key from the
+user's password via PBKDF2 (600,000 iterations, per OWASP's current
+guidance) and a random per-user salt. That key lives only in React state —
+never written to `localStorage`/`sessionStorage`/anywhere — so closing the
+tab forgets it and a fresh sign-in re-derives it identically. `WizardProvider`
+auto-saves the encrypted wizard state to Supabase on a 1.5s debounce.
 
 **Why there's still an "unlock" prompt on a returning visit:** with
 "Remember me" checked, Supabase restores the session automatically on a
