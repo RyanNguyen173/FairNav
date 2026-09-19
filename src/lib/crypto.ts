@@ -41,7 +41,14 @@ async function importPasswordKey(password: string): Promise<CryptoKey> {
   return crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveKey'])
 }
 
-/** Derives the AES-256-GCM key used to encrypt/decrypt this user's data. */
+/**
+ * Derives the AES-256-GCM key used to encrypt/decrypt this user's data (the
+ * legacy pre-DEK model), or to wrap/unwrap a DEK (the current model) - same
+ * derivation either way, just used differently by the caller. Needs all
+ * four usages since WebCrypto's wrapKey()/unwrapKey() require the
+ * wrapping/unwrapping key to explicitly carry "wrapKey"/"unwrapKey", not
+ * just "encrypt"/"decrypt".
+ */
 export async function deriveEncryptionKey(password: string, saltBase64: string): Promise<CryptoKey> {
   const passwordKey = await importPasswordKey(password)
   return crypto.subtle.deriveKey(
@@ -49,7 +56,7 @@ export async function deriveEncryptionKey(password: string, saltBase64: string):
     passwordKey,
     { name: 'AES-GCM', length: 256 },
     false,
-    ['encrypt', 'decrypt'],
+    ['encrypt', 'decrypt', 'wrapKey', 'unwrapKey'],
   )
 }
 
@@ -72,4 +79,58 @@ export async function decryptJSON<T>(key: CryptoKey, payload: EncryptedPayload):
     base64ToBuffer(payload.ciphertext),
   )
   return JSON.parse(new TextDecoder().decode(decrypted)) as T
+}
+
+/**
+ * Data Encryption Key (DEK) model, layered on top of the password-derived
+ * key above so a password reset doesn't destroy access to existing data.
+ *
+ * Instead of a password-derived key encrypting the user's data directly, it
+ * encrypts one random DEK, which in turn encrypts the data and never
+ * changes. The same DEK is *also* wrapped by a key derived from a one-time
+ * recovery code. Resetting a password just re-wraps the still-unchanged DEK
+ * under a new password-derived key - the data itself is never re-encrypted
+ * and the recovery-wrapped copy is untouched, so it keeps working.
+ * Extractable (unlike deriveEncryptionKey's key) because wrapKey/unwrapKey
+ * need to serialize it - it never leaves this module unwrapped either way.
+ */
+export async function generateDataKey(): Promise<CryptoKey> {
+  return crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt'])
+}
+
+export async function wrapKey(wrappingKey: CryptoKey, keyToWrap: CryptoKey): Promise<EncryptedPayload> {
+  const iv = crypto.getRandomValues(new Uint8Array(12))
+  const wrapped = await crypto.subtle.wrapKey('raw', keyToWrap, wrappingKey, { name: 'AES-GCM', iv })
+  return { ciphertext: bufferToBase64(new Uint8Array(wrapped)), iv: bufferToBase64(iv) }
+}
+
+/** Throws (AES-GCM auth tag check fails) if `wrappingKey` was derived from the wrong secret. */
+export async function unwrapKey(wrappingKey: CryptoKey, payload: EncryptedPayload): Promise<CryptoKey> {
+  return crypto.subtle.unwrapKey(
+    'raw',
+    base64ToBuffer(payload.ciphertext),
+    wrappingKey,
+    { name: 'AES-GCM', iv: base64ToBuffer(payload.iv) },
+    { name: 'AES-GCM', length: 256 },
+    true,
+    ['encrypt', 'decrypt'],
+  )
+}
+
+// Excludes visually ambiguous characters (0/O, 1/I/L) since this is meant
+// to be hand-copied/retyped from a screen, unlike a password.
+const RECOVERY_KEY_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
+
+/** A 24-character recovery code (~120 bits of entropy) shown once at signup. */
+export function generateRecoveryKey(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(24))
+  const chars = Array.from(bytes, (byte) => RECOVERY_KEY_ALPHABET[byte % RECOVERY_KEY_ALPHABET.length])
+  const groups: string[] = []
+  for (let i = 0; i < chars.length; i += 4) groups.push(chars.slice(i, i + 4).join(''))
+  return groups.join('-')
+}
+
+/** Strips formatting so pasted/retyped recovery keys match regardless of spacing or case. */
+export function normalizeRecoveryKey(input: string): string {
+  return input.replace(/[^a-z0-9]/gi, '').toUpperCase()
 }

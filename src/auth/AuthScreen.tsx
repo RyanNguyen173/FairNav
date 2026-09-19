@@ -15,6 +15,82 @@ const FEATURES = [
   'A live booth-by-booth route for the day of the fair',
 ]
 
+function ForgotPasswordForm({ onBack }: { onBack: () => void }) {
+  const { requestPasswordReset, error, clearError } = useAuth()
+  const [email, setEmail] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [sent, setSent] = useState(false)
+
+  const handleSubmit = async () => {
+    if (!email.trim() || submitting) return
+    clearError()
+    setSubmitting(true)
+    try {
+      await requestPasswordReset(email.trim())
+      setSent(true)
+    } catch {
+      // requestPasswordReset already sets a user-facing error message.
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  if (sent) {
+    return (
+      <div className="w-full max-w-sm">
+        <p className="mb-4 text-sm text-success">
+          If an account exists for {email.trim()}, we&apos;ve sent a password reset link to it.
+        </p>
+        <button
+          type="button"
+          onClick={onBack}
+          className="w-full cursor-pointer text-center text-sm font-medium text-muted-foreground hover:text-foreground"
+        >
+          Back to sign in
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="w-full max-w-sm">
+      <h2 className="mb-1 text-lg font-bold text-foreground">Reset your password</h2>
+      <p className="mb-4 text-sm text-muted-foreground">
+        We&apos;ll email you a link to reset it. You&apos;ll need your recovery key afterward to get your existing
+        data back.
+      </p>
+
+      <div className="mb-4">
+        <FieldLabel htmlFor="forgot-email">Email address</FieldLabel>
+        <TextInput
+          id="forgot-email"
+          type="email"
+          autoComplete="email"
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' && email.trim()) handleSubmit()
+          }}
+        />
+      </div>
+
+      {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
+
+      <Button fullWidth disabled={!email.trim() || submitting} loading={submitting} onClick={handleSubmit}>
+        Send Reset Link
+      </Button>
+
+      <button
+        type="button"
+        onClick={onBack}
+        className="mt-4 w-full cursor-pointer text-center text-sm font-medium text-muted-foreground hover:text-foreground"
+      >
+        Back to sign in
+      </button>
+    </div>
+  )
+}
+
 function UnlockPrompt() {
   const { unlockWithPassword, error, clearError, signOut } = useAuth()
   const [password, setPassword] = useState('')
@@ -83,6 +159,7 @@ export function AuthScreen() {
   const [remember, setRemember] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [infoMessage, setInfoMessage] = useState<string | null>(null)
+  const [forgotPassword, setForgotPassword] = useState(false)
 
   if (loading || (session && !isUnlocked && authenticating)) {
     return <div className="flex min-h-dvh items-center justify-center text-sm text-muted-foreground">Loading…</div>
@@ -142,82 +219,105 @@ export function AuthScreen() {
         </div>
 
         <div className="flex flex-1 flex-col items-center justify-center px-4 py-8 md:px-12">
-          <div className="w-full max-w-sm">
-            <div className="mb-6 grid grid-cols-2 gap-1 rounded-xl bg-muted p-1">
-              {(['signin', 'signup'] as const).map((value) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => {
-                    setMode(value)
-                    clearError()
-                    setInfoMessage(null)
-                  }}
-                  className={[
-                    'min-h-9 cursor-pointer rounded-lg text-sm font-semibold transition-colors duration-150',
-                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                    mode === value ? 'bg-card text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground',
-                  ].join(' ')}
-                >
-                  {value === 'signin' ? 'Sign In' : 'Create Account'}
-                </button>
-              ))}
-            </div>
-
-            <div className="mb-4">
-              <FieldLabel htmlFor="email">Email address</FieldLabel>
-              <TextInput
-                id="email"
-                type="email"
-                autoComplete="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-              />
-            </div>
-
-            <div className="mb-4">
-              <FieldLabel htmlFor="password">Password</FieldLabel>
-              <TextInput
-                id="password"
-                type="password"
-                autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-              />
-              {mode === 'signup' && password.length > 0 && <PasswordChecklist password={password} />}
-            </div>
-
-            {mode === 'signup' && (
-              <div className="mb-4">
-                <FieldLabel htmlFor="confirmPassword">Confirm password</FieldLabel>
-                <TextInput
-                  id="confirmPassword"
-                  type="password"
-                  autoComplete="new-password"
-                  value={confirmPassword}
-                  onChange={(event) => setConfirmPassword(event.target.value)}
-                />
-                {confirmMismatch && <p className="mt-1 text-xs text-destructive">Passwords don&apos;t match.</p>}
+          {forgotPassword ? (
+            <ForgotPasswordForm
+              onBack={() => {
+                setForgotPassword(false)
+                clearError()
+              }}
+            />
+          ) : (
+            <div className="w-full max-w-sm">
+              <div className="mb-6 grid grid-cols-2 gap-1 rounded-xl bg-muted p-1">
+                {(['signin', 'signup'] as const).map((value) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => {
+                      setMode(value)
+                      clearError()
+                      setInfoMessage(null)
+                    }}
+                    className={[
+                      'min-h-9 cursor-pointer rounded-lg text-sm font-semibold transition-colors duration-150',
+                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                      mode === value ? 'bg-card text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground',
+                    ].join(' ')}
+                  >
+                    {value === 'signin' ? 'Sign In' : 'Create Account'}
+                  </button>
+                ))}
               </div>
-            )}
 
-            <label className="mb-5 flex cursor-pointer items-center gap-2 text-sm text-muted-foreground">
-              <input
-                type="checkbox"
-                checked={remember}
-                onChange={(event) => setRemember(event.target.checked)}
-                className="h-4 w-4 cursor-pointer accent-primary"
-              />
-              Remember me on this device
-            </label>
+              <div className="mb-4">
+                <FieldLabel htmlFor="email">Email address</FieldLabel>
+                <TextInput
+                  id="email"
+                  type="email"
+                  autoComplete="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                />
+              </div>
 
-            {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
-            {infoMessage && <p className="mb-4 text-sm text-success">{infoMessage}</p>}
+              <div className="mb-4">
+                <div className="flex items-center justify-between">
+                  <FieldLabel htmlFor="password">Password</FieldLabel>
+                  {mode === 'signin' && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setForgotPassword(true)
+                        clearError()
+                      }}
+                      className="mb-1.5 cursor-pointer text-xs font-medium text-primary hover:underline"
+                    >
+                      Forgot password?
+                    </button>
+                  )}
+                </div>
+                <TextInput
+                  id="password"
+                  type="password"
+                  autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                />
+                {mode === 'signup' && password.length > 0 && <PasswordChecklist password={password} />}
+              </div>
 
-            <Button fullWidth disabled={!canSubmit || submitting} loading={submitting} onClick={handleSubmit}>
-              Unlock FairNav Engine
-            </Button>
-          </div>
+              {mode === 'signup' && (
+                <div className="mb-4">
+                  <FieldLabel htmlFor="confirmPassword">Confirm password</FieldLabel>
+                  <TextInput
+                    id="confirmPassword"
+                    type="password"
+                    autoComplete="new-password"
+                    value={confirmPassword}
+                    onChange={(event) => setConfirmPassword(event.target.value)}
+                  />
+                  {confirmMismatch && <p className="mt-1 text-xs text-destructive">Passwords don&apos;t match.</p>}
+                </div>
+              )}
+
+              <label className="mb-5 flex cursor-pointer items-center gap-2 text-sm text-muted-foreground">
+                <input
+                  type="checkbox"
+                  checked={remember}
+                  onChange={(event) => setRemember(event.target.checked)}
+                  className="h-4 w-4 cursor-pointer accent-primary"
+                />
+                Remember me on this device
+              </label>
+
+              {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
+              {infoMessage && <p className="mb-4 text-sm text-success">{infoMessage}</p>}
+
+              <Button fullWidth disabled={!canSubmit || submitting} loading={submitting} onClick={handleSubmit}>
+                Unlock FairNav Engine
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </div>
