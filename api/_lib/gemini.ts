@@ -62,7 +62,6 @@ export function describeProfile(profile: ProfileData): string {
   return [
     `- Major: ${profile.major || 'Undeclared'}`,
     `- Graduation year: ${profile.gradYear || 'Unknown'}`,
-    `- Experience level: ${profile.experienceLevel}`,
     `- Skills: ${profile.skills.join(', ') || 'None listed'}`,
     `- Interests: ${profile.interests.join(', ') || 'None listed'}`,
   ].join('\n')

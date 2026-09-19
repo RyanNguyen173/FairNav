@@ -1,5 +1,4 @@
 export type TargetPosition = 'internship' | 'fulltime'
-export type ExperienceLevel = 'no-experience' | 'some-experience' | 'experienced'
 export type AsyncStatus = 'idle' | 'working' | 'done'
 
 export interface ContactInfo {
@@ -46,7 +45,6 @@ export interface Education {
 export interface ProfileData {
   major: string
   gradYear: string
-  experienceLevel: ExperienceLevel
   skills: string[]
   interests: string[]
   experience: WorkExperience[]
@@ -121,7 +119,6 @@ export const initialWizardState: WizardState = {
   profile: {
     major: '',
     gradYear: '',
-    experienceLevel: 'some-experience',
     skills: [],
     interests: [],
     experience: [],

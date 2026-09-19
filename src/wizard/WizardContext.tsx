@@ -17,7 +17,6 @@ import {
   type CompanyPrep,
   type ContactInfo,
   type Education,
-  type ExperienceLevel,
   type TargetPosition,
   type WizardState,
   type WorkExperience,
@@ -42,7 +41,6 @@ type Action =
     }
   | { type: 'SET_TARGET_POSITION'; position: TargetPosition }
   | { type: 'SET_PROFILE_FIELD'; field: 'major' | 'gradYear'; value: string }
-  | { type: 'SET_EXPERIENCE_LEVEL'; value: ExperienceLevel }
   | { type: 'ADD_SKILL'; skill: string }
   | { type: 'REMOVE_SKILL'; skill: string }
   | { type: 'ADD_INTEREST'; interest: string }
@@ -102,8 +100,6 @@ function reducer(state: WizardState, action: Action): WizardState {
 
     case 'SET_PROFILE_FIELD':
       return { ...state, profile: { ...state.profile, [action.field]: action.value } }
-    case 'SET_EXPERIENCE_LEVEL':
-      return { ...state, profile: { ...state.profile, experienceLevel: action.value } }
     case 'ADD_SKILL':
       if (state.profile.skills.includes(action.skill)) return state
       return { ...state, profile: { ...state.profile, skills: [...state.profile.skills, action.skill] } }

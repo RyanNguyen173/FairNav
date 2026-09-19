@@ -5,14 +5,8 @@ import { Chip } from '../components/Chip'
 import { Header } from '../components/Header'
 import { FieldLabel, SectionCard, StepShell, TextInput } from '../components/StepShell'
 import { suggestedInterests } from '../wizard/mockEngine'
-import type { Education, ExperienceLevel, WorkExperience } from '../wizard/types'
+import type { Education, WorkExperience } from '../wizard/types'
 import { useWizard } from '../wizard/WizardContext'
-
-const EXPERIENCE_OPTIONS: { value: ExperienceLevel; label: string }[] = [
-  { value: 'no-experience', label: 'No experience yet' },
-  { value: 'some-experience', label: 'Some experience' },
-  { value: 'experienced', label: 'Experienced' },
-]
 
 function EntryCard({ title, onRemove, children }: { title: string; onRemove: () => void; children: React.ReactNode }) {
   return (
@@ -280,22 +274,6 @@ export function Step2ProfileEditor() {
         <p className="mb-5 text-sm text-muted-foreground">
           Confirm your details, experience, and education so FairNav can rank the right companies for you.
         </p>
-
-        <SectionCard className="mb-6">
-          <FieldLabel htmlFor="experienceLevel">Experience level</FieldLabel>
-          <select
-            id="experienceLevel"
-            value={profile.experienceLevel}
-            onChange={(event) => dispatch({ type: 'SET_EXPERIENCE_LEVEL', value: event.target.value as ExperienceLevel })}
-            className="min-h-11 w-full max-w-sm rounded-xl border border-border bg-card px-3.5 text-[15px] text-card-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            {EXPERIENCE_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </SectionCard>
 
         <div className="md:grid md:grid-cols-2 md:items-start md:gap-8">
           <SectionCard className="mb-6 md:mb-0">
