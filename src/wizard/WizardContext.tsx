@@ -218,7 +218,19 @@ interface WizardProviderProps {
 export function WizardProvider({ children, initialState }: WizardProviderProps) {
   const [state, dispatch] = useReducer(
     reducer,
-    initialState ? { ...initialWizardState, ...initialState } : initialWizardState,
+    initialState
+      ? {
+          ...initialWizardState,
+          ...initialState,
+          // Shallow-merging the top level isn't enough: a saved profile/resume/fair
+          // object from before a schema change (e.g. adding experience/leadership)
+          // would fully replace these defaults and leave newer fields undefined.
+          resume: { ...initialWizardState.resume, ...initialState.resume },
+          profile: { ...initialWizardState.profile, ...initialState.profile },
+          fair: { ...initialWizardState.fair, ...initialState.fair },
+          fairMode: { ...initialWizardState.fairMode, ...initialState.fairMode },
+        }
+      : initialWizardState,
   )
   const { session, encryptionKey } = useAuth()
 
