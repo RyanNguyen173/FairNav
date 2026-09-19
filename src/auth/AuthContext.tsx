@@ -25,8 +25,9 @@ interface ProfileRow {
  *
  * A wrong password against an EXISTING row surfaces here too: deriving the
  * wrong key makes AES-GCM's auth tag check fail, so decryptJSON throws.
- * That's what the magic-link "enter your password to unlock" step relies
- * on for validation, since that path never calls signInWithPassword.
+ * That's what the "enter your password to unlock" step relies on for
+ * validation, when a remembered session is restored on a new page load
+ * (see unlockWithPassword below) without a password on hand yet.
  */
 async function unlockOrInitProfile(
   userId: string,
@@ -70,8 +71,7 @@ interface AuthContextValue {
   /** Returns whether this project requires confirming the email before a session exists. */
   signUp: (email: string, password: string, remember: boolean) => Promise<{ needsEmailConfirmation: boolean }>
   signIn: (email: string, password: string, remember: boolean) => Promise<void>
-  sendMagicLink: (email: string) => Promise<void>
-  /** For a session established via magic link, which has no password on hand yet. */
+  /** For a restored session (page reload) that has no password on hand yet. */
   unlockWithPassword: (password: string) => Promise<void>
   signOut: () => Promise<void>
 }
@@ -142,12 +142,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  const sendMagicLink = useCallback(async (email: string) => {
-    setError(null)
-    const { error: otpError } = await supabase.auth.signInWithOtp({ email })
-    if (otpError) setError(otpError.message)
-  }, [])
-
   const unlockWithPassword = useCallback(
     async (password: string) => {
       if (!session?.user) throw new Error('No active session to unlock')
@@ -182,23 +176,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       clearError,
       signUp,
       signIn,
-      sendMagicLink,
       unlockWithPassword,
       signOut,
     }),
-    [
-      session,
-      encryptionKey,
-      hydratedState,
-      loading,
-      error,
-      clearError,
-      signUp,
-      signIn,
-      sendMagicLink,
-      unlockWithPassword,
-      signOut,
-    ],
+    [session, encryptionKey, hydratedState, loading, error, clearError, signUp, signIn, unlockWithPassword, signOut],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

@@ -60,8 +60,8 @@ function UnlockPrompt() {
           <LockKey size={28} weight="fill" className="mb-3 text-primary" aria-hidden="true" />
           <h1 className="mb-1 text-lg font-bold text-foreground">Unlock your data</h1>
           <p className="text-sm text-muted-foreground">
-            You&apos;re signed in via magic link. Enter your password to decrypt your profile - we
-            never store it ourselves, so this step can&apos;t be skipped.
+            Enter your password to decrypt your profile - we never store it ourselves, so this
+            step can&apos;t be skipped even on a remembered device.
           </p>
         </div>
 
@@ -98,9 +98,8 @@ function UnlockPrompt() {
 }
 
 export function AuthScreen() {
-  const { session, isUnlocked, loading, error, clearError, signUp, signIn, sendMagicLink } = useAuth()
+  const { session, isUnlocked, loading, error, clearError, signUp, signIn } = useAuth()
   const [mode, setMode] = useState<Mode>('signin')
-  const [magicLinkMode, setMagicLinkMode] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -118,9 +117,8 @@ export function AuthScreen() {
 
   const strength = getPasswordStrength(password)
   const confirmMismatch = mode === 'signup' && confirmPassword.length > 0 && password !== confirmPassword
-  const canSubmit = magicLinkMode
-    ? email.length > 3
-    : mode === 'signin'
+  const canSubmit =
+    mode === 'signin'
       ? email.length > 3 && password.length > 0
       : email.length > 3 && password.length >= 8 && password === confirmPassword
 
@@ -130,11 +128,6 @@ export function AuthScreen() {
     setInfoMessage(null)
     setSubmitting(true)
     try {
-      if (magicLinkMode) {
-        await sendMagicLink(email)
-        setInfoMessage('Check your email for a sign-in link.')
-        return
-      }
       if (mode === 'signup') {
         const { needsEmailConfirmation } = await signUp(email, password, remember)
         if (needsEmailConfirmation) {
@@ -181,7 +174,6 @@ export function AuthScreen() {
                   type="button"
                   onClick={() => {
                     setMode(value)
-                    setMagicLinkMode(false)
                     clearError()
                     setInfoMessage(null)
                   }}
@@ -207,62 +199,46 @@ export function AuthScreen() {
               />
             </div>
 
-            {!magicLinkMode && (
-              <>
-                <div className="mb-4">
-                  <FieldLabel htmlFor="password">Password</FieldLabel>
-                  <TextInput
-                    id="password"
-                    type="password"
-                    autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
-                    value={password}
-                    onChange={(event) => setPassword(event.target.value)}
-                  />
-                  {mode === 'signup' && password.length > 0 && (
-                    <div className="mt-1.5">
-                      <div className="flex gap-1">
-                        {[0, 1, 2, 3].map((segment) => (
-                          <span
-                            key={segment}
-                            className={[
-                              'h-1 flex-1 rounded-full transition-colors duration-200',
-                              segment <= strength.score - 1 ? strength.color : 'bg-muted',
-                            ].join(' ')}
-                          />
-                        ))}
-                      </div>
-                      <p className="mt-1 text-xs text-muted-foreground">{strength.label}</p>
-                    </div>
-                  )}
-                </div>
-
-                {mode === 'signup' && (
-                  <div className="mb-4">
-                    <FieldLabel htmlFor="confirmPassword">Confirm password</FieldLabel>
-                    <TextInput
-                      id="confirmPassword"
-                      type="password"
-                      autoComplete="new-password"
-                      value={confirmPassword}
-                      onChange={(event) => setConfirmPassword(event.target.value)}
-                    />
-                    {confirmMismatch && <p className="mt-1 text-xs text-destructive">Passwords don&apos;t match.</p>}
+            <div className="mb-4">
+              <FieldLabel htmlFor="password">Password</FieldLabel>
+              <TextInput
+                id="password"
+                type="password"
+                autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+              />
+              {mode === 'signup' && password.length > 0 && (
+                <div className="mt-1.5">
+                  <div className="flex gap-1">
+                    {[0, 1, 2, 3].map((segment) => (
+                      <span
+                        key={segment}
+                        className={[
+                          'h-1 flex-1 rounded-full transition-colors duration-200',
+                          segment <= strength.score - 1 ? strength.color : 'bg-muted',
+                        ].join(' ')}
+                      />
+                    ))}
                   </div>
-                )}
-              </>
-            )}
+                  <p className="mt-1 text-xs text-muted-foreground">{strength.label}</p>
+                </div>
+              )}
+            </div>
 
-            <button
-              type="button"
-              onClick={() => {
-                setMagicLinkMode((current) => !current)
-                clearError()
-                setInfoMessage(null)
-              }}
-              className="mb-4 cursor-pointer text-sm font-semibold text-primary hover:underline"
-            >
-              {magicLinkMode ? 'Use password instead' : 'Send magic link instead'}
-            </button>
+            {mode === 'signup' && (
+              <div className="mb-4">
+                <FieldLabel htmlFor="confirmPassword">Confirm password</FieldLabel>
+                <TextInput
+                  id="confirmPassword"
+                  type="password"
+                  autoComplete="new-password"
+                  value={confirmPassword}
+                  onChange={(event) => setConfirmPassword(event.target.value)}
+                />
+                {confirmMismatch && <p className="mt-1 text-xs text-destructive">Passwords don&apos;t match.</p>}
+              </div>
+            )}
 
             <label className="mb-5 flex cursor-pointer items-center gap-2 text-sm text-muted-foreground">
               <input
@@ -282,7 +258,7 @@ export function AuthScreen() {
             {infoMessage && <p className="mb-4 text-sm text-success">{infoMessage}</p>}
 
             <Button fullWidth disabled={!canSubmit || submitting} loading={submitting} onClick={handleSubmit}>
-              {magicLinkMode ? 'Send Magic Link' : 'Unlock FairNav Engine'}
+              Unlock FairNav Engine
             </Button>
           </div>
         </div>

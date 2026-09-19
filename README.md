@@ -59,8 +59,8 @@ Three follow-ups are intentionally deferred and still open:
 - Phosphor icons (`@phosphor-icons/react`)
 - Gemini API (`@google/genai`), 4 separate Vercel serverless functions
   sharing helpers from `api/_lib/gemini.ts`
-- Supabase (`@supabase/supabase-js`) for email/password + magic-link auth
-  and Postgres storage of encrypted profile data
+- Supabase (`@supabase/supabase-js`) for email/password auth and Postgres
+  storage of encrypted profile data
 - Web Crypto API (PBKDF2 + AES-256-GCM) for client-side encryption —
   `src/lib/crypto.ts`, no dependency
 
@@ -89,13 +89,18 @@ never written to `localStorage`/`sessionStorage`/anywhere — so closing the
 tab forgets it and a fresh sign-in re-derives it identically. `WizardProvider`
 auto-saves the encrypted wizard state to Supabase on a 1.5s debounce.
 
-**A real constraint worth knowing:** the spec's magic-link (passwordless)
-option can't supply a password to derive a key from. Per the resolved
-design, magic link only re-establishes the *session* — the app then shows
-an "enter your password to unlock" prompt (`src/auth/AuthScreen.tsx`'s
-`UnlockPrompt`) before any encrypted data can be read. This keeps the
-zero-knowledge property intact for every account, at the cost of magic
-link not being a full passwordless experience.
+**Why there's still an "unlock" prompt on a returning visit:** with
+"Remember me" checked, Supabase restores the session automatically on a
+page reload — but the encryption key is never persisted (by design), so
+`AuthScreen.tsx`'s `UnlockPrompt` asks for the password again to re-derive
+it before any encrypted data can be read. This is what keeps the
+zero-knowledge property real rather than nominal: a persisted session alone
+is never enough to decrypt anything.
+
+Password-only auth (no magic link) was a deliberate simplification — the
+original spec's magic-link option couldn't supply a password to derive a
+key from anyway, so it would have needed this same unlock step immediately
+after signing in, which added a confusing extra screen for little benefit.
 
 ### Setup
 
@@ -146,7 +151,7 @@ supabase/
   schema.sql     Run once in the Supabase SQL Editor - profiles table + RLS
 src/
   auth/          AuthContext (Supabase session + encryption key lifecycle),
-                 AuthScreen (Page 0: sign in/up, magic link, unlock prompt)
+                 AuthScreen (Page 0: sign in/up, password-unlock prompt)
   lib/           supabaseClient.ts, crypto.ts (PBKDF2 + AES-256-GCM, no deps)
   theme/         Light/dark theme context (persists to localStorage)
   wizard/        Wizard state (reducer), types, aiEngine (real calls) and
