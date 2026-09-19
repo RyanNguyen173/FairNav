@@ -1,4 +1,4 @@
-import { Buildings, CalendarBlank, CaretRight, Copy, MapPin, PencilSimple, Plus, Trash } from '@phosphor-icons/react'
+import { Buildings, CalendarBlank, Copy, MapPin, PencilSimple, Plus, Trash } from '@phosphor-icons/react'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { Button } from '../components/Button'
@@ -17,14 +17,6 @@ const STATUS_CLASS: Record<FairStatus, string> = {
   draft: 'bg-muted text-muted-foreground',
   'in-progress': 'bg-secondary text-on-secondary',
   completed: 'bg-success text-on-success',
-}
-
-/** Where "Resume / Enter Fair" should take you, based on how far this fair has gotten. `null` means it's live - switch to the Fair Day tab instead of navigating. */
-function resumeRouteFor(fair: FairProfile): string | null {
-  if (fair.fairMode.active) return null
-  if (fair.companies.length === 0) return '/fair'
-  if (Object.keys(fair.prep).length === 0) return '/matches'
-  return '/briefs'
 }
 
 function CreateFairModal({
@@ -114,19 +106,10 @@ function CreateFairModal({
   )
 }
 
-function FairCard({ fair, onEnterFairDay }: { fair: FairProfile; onEnterFairDay: () => void }) {
+function FairCard({ fair }: { fair: FairProfile }) {
   const { dispatch } = useWizard()
   const router = useRouter()
 
-  const handleResume = () => {
-    dispatch({ type: 'SET_ACTIVE_FAIR', id: fair.id })
-    const route = resumeRouteFor(fair)
-    if (route) {
-      router.push(route)
-    } else {
-      onEnterFairDay()
-    }
-  }
   const handleEdit = () => {
     dispatch({ type: 'SET_ACTIVE_FAIR', id: fair.id })
     router.push('/fair')
@@ -174,18 +157,10 @@ function FairCard({ fair, onEnterFairDay }: { fair: FairProfile; onEnterFairDay:
         </span>
       </div>
 
-      <div className="mb-2 flex items-center gap-2">
+      <div className="mb-2">
         <Button
           variant="secondary"
-          className="flex-1"
-          icon={<CaretRight size={15} weight="bold" aria-hidden="true" />}
-          onClick={handleResume}
-        >
-          {fair.fairMode.active ? 'Fair Day' : fair.status === 'draft' && fair.companies.length === 0 ? 'Start' : 'Resume'}
-        </Button>
-        <Button
-          variant="secondary"
-          className="flex-1"
+          fullWidth
           icon={<PencilSimple size={15} weight="bold" aria-hidden="true" />}
           onClick={handleEdit}
         >
@@ -216,8 +191,14 @@ function FairCard({ fair, onEnterFairDay }: { fair: FairProfile; onEnterFairDay:
   )
 }
 
-/** The "all your fairs" hub - Home's default tab. */
-export function FairBoard({ onEnterFairDay }: { onEnterFairDay: () => void }) {
+/**
+ * The "all your fairs" hub - Home's default tab. Deliberately offers no way
+ * into Fair Day from here: Edit is the only action on a card, and it always
+ * lands on that fair's Details page. Entering Fair Mode only ever happens
+ * from the Fair Day tab itself (see FairDay.tsx) or that fair's own Briefs
+ * page - never from the board.
+ */
+export function FairBoard() {
   const { state } = useWizard()
   const [modalOpen, setModalOpen] = useState(false)
   const { resume, fairProfiles } = state
@@ -233,7 +214,7 @@ export function FairBoard({ onEnterFairDay }: { onEnterFairDay: () => void }) {
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {fairProfiles.map((fair) => (
-          <FairCard key={fair.id} fair={fair} onEnterFairDay={onEnterFairDay} />
+          <FairCard key={fair.id} fair={fair} />
         ))}
       </div>
 

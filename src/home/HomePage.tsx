@@ -57,7 +57,7 @@ export function HomePage() {
 
       {tab === 'board' ? (
         <div className="mx-auto w-full max-w-md flex-1 px-4 pb-8 pt-5 md:max-w-5xl md:px-8">
-          <FairBoard onEnterFairDay={() => setTab('day')} />
+          <FairBoard />
         </div>
       ) : (
         <FairDay />
