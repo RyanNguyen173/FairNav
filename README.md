@@ -7,13 +7,13 @@ during the event with a live route map.
 
 Built for SASEhack 2026 — Social Impact and Design tracks.
 
-## Status: real AI backend + zero-knowledge auth, with a demo fallback
+## Status: real AI backend + zero-knowledge auth
 
 Accounts, encryption, and persistence (Supabase Auth + Postgres, AES-256-GCM
 client-side encryption) are live — see "Authentication & encryption" below.
 If `NEXT_PUBLIC_SUPABASE_URL`/`NEXT_PUBLIC_SUPABASE_ANON_KEY` aren't set, the
-app skips auth entirely and runs the wizard directly (no bricked app during
-local UI work), same fallback philosophy as the AI calls below.
+app skips auth entirely and runs the wizard directly (a local-dev
+convenience, unrelated to the AI backend below).
 
 Every AI step is its own Gemini-backed Next.js Route Handler, each holding
 `GEMINI_API_KEY` server-side:
@@ -21,11 +21,13 @@ Every AI step is its own Gemini-backed Next.js Route Handler, each holding
 - `app/api/parse-resume` — resume → contact info, major, grad year, skills, interests, work experience, and education
 - `app/api/parse-directory` — exhibitor directory (file or pasted text) → company + booth number pairs
 - `app/api/rank-companies` — parsed booths + profile → ranked companies with match scores
-- `app/api/generate-pitches` — selected companies + profile → elevator pitch + questions per company
+- `app/api/generate-pitches` — selected companies + profile → elevator pitch, questions, and company research per company
 
-If any call fails for any reason — no key configured, offline, rate limited
-— the app falls back to the original simulated data in `src/wizard/mockEngine.ts`
-so the wizard stays usable either way (a console warning notes when this happens).
+`GEMINI_API_KEY` is required in every real deployment - there is no demo/mock
+fallback. If a call fails (offline, rate limited, misconfigured key), the
+error surfaces to the user rather than being papered over with invented
+data, and the UI won't let you proceed past a step (e.g. into Matches)
+without real exhibitor data for the AI to work from in the first place.
 
 Pitch generation for all selected companies happens in a single request
 rather than one per company — fewer concurrent calls against the same API
@@ -35,15 +37,8 @@ once with backoff before giving up. Every call also sets `thinkingLevel:
 MINIMAL` (Gemini 3.x's low-latency setting) since these are structured
 extraction/classification tasks, not multi-step reasoning.
 
-Two follow-ups are intentionally deferred and still open:
+One follow-up is intentionally deferred and still open:
 
-- **Booth map image isn't analyzed.** Step 3's "Booth map" upload (the
-  fair's physical layout image/PDF) is stored by name only and never read —
-  the route map's booth positions are a synthetic grid (`boothCoordinatesForIndex`
-  in `mockEngine.ts`), not the real layout. Feeding that image to Gemini's
-  vision input to place booths at real positions is a natural next step, but
-  adds another AI call (and more latency) per fair setup, so it's left as a
-  deliberate choice rather than bundled in silently.
 - **No route guards.** Each per-fair page is a real URL (see "Stack"
   below), but nothing stops visiting e.g. `/matches` directly before
   finishing `/fair` - it'll just render with empty data. Not a problem for
@@ -80,8 +75,9 @@ npm install
 npm run dev
 ```
 
-Without `GEMINI_API_KEY`/Supabase env vars set, AI calls fall back to mock
-data and auth is skipped entirely — good enough for UI work with zero setup.
+`GEMINI_API_KEY` is required for the AI steps to work at all — see "Using
+the real AI backend" below. Without Supabase env vars set, auth is skipped
+entirely, which is enough to poke at the UI without setting up a project.
 
 ## Authentication & encryption
 
@@ -200,8 +196,8 @@ src/
   lib/           supabaseClient.ts, crypto.ts (PBKDF2 + AES-256-GCM, no deps),
                  gemini.ts (shared Gemini client/retry logic for the API routes)
   theme/         Light/dark theme context (persists to localStorage)
-  wizard/        Wizard state (reducer), types, aiEngine (real calls) and
-                 mockEngine (demo fallback data)
+  wizard/        Wizard state (reducer), types, aiEngine (Gemini calls),
+                 optionPools (skills/interests autocomplete data)
   components/    Shared UI: Button, Chip, UploadDropzone, Header, AccountMenu,
                  RouteMap...
   steps/         The per-fair pipeline screens (Step3FairIngestion ...

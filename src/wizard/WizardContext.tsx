@@ -21,6 +21,7 @@ const AUTOSAVE_DELAY_MS = 1500
 type Action =
   | { type: 'RESUME_FILE_SELECTED'; fileName: string }
   | { type: 'RESUME_PARSING' }
+  | { type: 'RESUME_PARSE_FAILED' }
   | {
       type: 'RESUME_PARSED'
       contact: ContactInfo
@@ -48,13 +49,12 @@ type Action =
   | { type: 'DUPLICATE_FAIR_PROFILE'; id: string }
   | { type: 'REMOVE_FAIR_PROFILE'; id: string }
   | { type: 'SET_FAIR_FIELD'; field: 'name' | 'date' | 'location'; value: string }
-  | { type: 'SET_MAP_FILE'; fileName: string }
-  | { type: 'REMOVE_MAP_FILE' }
   | { type: 'SET_COMPANY_LIST_FILE'; fileName: string }
   | { type: 'REMOVE_COMPANY_LIST_FILE' }
   | { type: 'REMOVE_RESUME' }
   | { type: 'SET_COMPANY_DIRECTORY_TEXT'; value: string }
   | { type: 'FAIR_ANALYZING' }
+  | { type: 'FAIR_ANALYSIS_FAILED' }
   | { type: 'COMPANIES_MATCHED'; companies: Company[] }
   | { type: 'TOGGLE_COMPANY_SELECTION'; id: string }
   | { type: 'PREP_GENERATED'; prep: Record<string, CompanyPrep> }
@@ -85,6 +85,8 @@ function reducer(state: WizardState, action: Action): WizardState {
       }
     case 'RESUME_PARSING':
       return { ...state, resume: { ...state.resume, status: 'working' } }
+    case 'RESUME_PARSE_FAILED':
+      return { ...state, resume: { ...state.resume, status: 'idle' } }
     case 'RESUME_PARSED':
       return {
         ...state,
@@ -262,10 +264,6 @@ function reducer(state: WizardState, action: Action): WizardState {
 
     case 'SET_FAIR_FIELD':
       return updateActiveFair(state, (fair) => ({ ...fair, [action.field]: action.value }))
-    case 'SET_MAP_FILE':
-      return updateActiveFair(state, (fair) => ({ ...fair, mapFileName: action.fileName }))
-    case 'REMOVE_MAP_FILE':
-      return updateActiveFair(state, (fair) => ({ ...fair, mapFileName: null }))
     case 'SET_COMPANY_LIST_FILE':
       return updateActiveFair(state, (fair) => ({ ...fair, companyListFileName: action.fileName }))
     case 'REMOVE_COMPANY_LIST_FILE':
@@ -285,6 +283,8 @@ function reducer(state: WizardState, action: Action): WizardState {
       return updateActiveFair(state, (fair) => ({ ...fair, companyDirectoryText: action.value }))
     case 'FAIR_ANALYZING':
       return updateActiveFair(state, (fair) => ({ ...fair, ingestStatus: 'working' }))
+    case 'FAIR_ANALYSIS_FAILED':
+      return updateActiveFair(state, (fair) => ({ ...fair, ingestStatus: 'idle' }))
     case 'COMPANIES_MATCHED':
       // A fresh match result means whatever was selected/prepped/visited
       // against the OLD company list no longer corresponds to anything -
@@ -485,7 +485,6 @@ function migrateFairProfiles(
         eventName?: string
         date?: string
         location?: string
-        mapFileName?: string | null
         companyListFileName?: string | null
         companyDirectoryText?: string
         status?: FairProfile['ingestStatus']
@@ -499,7 +498,6 @@ function migrateFairProfiles(
       location: legacyFair.location ?? '',
       targetPosition:
         (initialState.resume as { targetPosition?: TargetPosition } | undefined)?.targetPosition ?? 'internship',
-      mapFileName: legacyFair.mapFileName ?? null,
       companyListFileName: legacyFair.companyListFileName ?? null,
       companyDirectoryText: legacyFair.companyDirectoryText ?? '',
       ingestStatus: legacyFair.status ?? 'idle',

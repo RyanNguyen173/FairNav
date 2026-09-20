@@ -117,7 +117,6 @@ export interface FairProfile {
   date: string
   location: string
   targetPosition: TargetPosition
-  mapFileName: string | null
   companyListFileName: string | null
   companyDirectoryText: string
   ingestStatus: AsyncStatus
@@ -152,7 +151,6 @@ export function createFairProfile(overrides: {
     date: overrides.date ?? '',
     location: overrides.location ?? '',
     targetPosition: overrides.targetPosition ?? 'internship',
-    mapFileName: null,
     companyListFileName: null,
     companyDirectoryText: '',
     ingestStatus: 'idle',

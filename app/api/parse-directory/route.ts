@@ -13,13 +13,19 @@ export async function POST(request: NextRequest) {
   return withGeminiHandler(request, async (ai, payload) => {
     const { rawText, file } = payload as ParseDirectoryPayload
 
+    // The caller is expected to gate this on real input existing - never
+    // invent exhibitors from nothing. Cheap client-side guard, not just a
+    // trust exercise: skips the API call entirely rather than relying on
+    // the model to refuse a request for fabricated data.
+    if (!file && !rawText.trim()) {
+      return { booths: [] }
+    }
+
     const instruction = file
       ? 'Extract every exhibitor/company and every booth number listed for it from the attached directory document, exactly as printed.'
-      : rawText.trim()
-        ? `Extract every company and every booth number listed for it from this list:\n${rawText}`
-        : 'No directory was provided. Invent a realistic set of 8-10 companies (with plausible booth numbers) that would attend a general career fair.'
+      : `Extract every company and every booth number listed for it from this list:\n${rawText}`
 
-    const prompt = `${instruction}\n\nIf a company has more than one booth (e.g. "12, 14" in one cell, or the same company on two separate rows), return one entry per booth number rather than combining or dropping any. Return each entry's company name and booth number (empty string if no booth number is given or known).`
+    const prompt = `${instruction}\n\nIf a company has more than one booth (e.g. "12, 14" in one cell, or the same company on two separate rows), return one entry per booth number rather than combining or dropping any. Return each entry's company name and booth number (empty string if no booth number is given or known). Only return companies that actually appear in the source - never invent or guess at exhibitors that aren't there.`
 
     const response = await generateWithRetry(ai, {
       model: MODEL,

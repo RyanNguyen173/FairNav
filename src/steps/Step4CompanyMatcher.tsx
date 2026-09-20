@@ -86,10 +86,12 @@ export function Step4CompanyMatcher() {
   const { companies, selectedCompanyIds } = fair
   const selectedCount = selectedCompanyIds.length
   const [isGenerating, setIsGenerating] = useState(false)
+  const [generateError, setGenerateError] = useState<string | null>(null)
   const profileInterests = new Set(profile.interests.map((interest) => interest.toLowerCase()))
 
   const handleGenerate = async () => {
     setIsGenerating(true)
+    setGenerateError(null)
     try {
       const selectedCompanies = selectedCompanyIds
         .map((id) => companies.find((c) => c.id === id))
@@ -99,6 +101,9 @@ export function Step4CompanyMatcher() {
 
       dispatch({ type: 'PREP_GENERATED', prep })
       router.push('/briefs')
+    } catch (error) {
+      console.error('Pitch generation failed:', error)
+      setGenerateError("Couldn't generate briefs - check your connection and try again.")
     } finally {
       setIsGenerating(false)
     }
@@ -162,6 +167,7 @@ export function Step4CompanyMatcher() {
                 ))}
               </ul>
             )}
+            {generateError && <p className="mb-3 text-sm text-destructive">{generateError}</p>}
             {generateButton}
           </div>
         </div>

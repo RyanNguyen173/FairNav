@@ -7,7 +7,7 @@ import { Header } from '../components/Header'
 import { FieldLabel, SectionCard, StepShell, TextInput } from '../components/StepShell'
 import { UploadDropzone } from '../components/UploadDropzone'
 import { parseResume } from '../wizard/aiEngine'
-import { INTEREST_POOL, SKILL_POOL } from '../wizard/mockEngine'
+import { INTEREST_POOL, SKILL_POOL } from '../wizard/optionPools'
 import type { Education, TargetPosition, WorkExperience } from '../wizard/types'
 import { useWizard } from '../wizard/WizardContext'
 
@@ -20,21 +20,29 @@ function ResumeSection() {
   const { state, dispatch } = useWizard()
   const { resume } = state
   const isParsed = resume.status === 'done'
+  const [parseError, setParseError] = useState<string | null>(null)
 
   const handleFile = async (file: File) => {
+    setParseError(null)
     dispatch({ type: 'RESUME_FILE_SELECTED', fileName: file.name })
     dispatch({ type: 'RESUME_PARSING' })
-    const parsed = await parseResume(file)
-    dispatch({
-      type: 'RESUME_PARSED',
-      contact: parsed.contact,
-      major: parsed.major,
-      gradYear: parsed.gradYear,
-      skills: parsed.skills,
-      interests: parsed.interests,
-      experience: parsed.experience,
-      education: parsed.education,
-    })
+    try {
+      const parsed = await parseResume(file)
+      dispatch({
+        type: 'RESUME_PARSED',
+        contact: parsed.contact,
+        major: parsed.major,
+        gradYear: parsed.gradYear,
+        skills: parsed.skills,
+        interests: parsed.interests,
+        experience: parsed.experience,
+        education: parsed.education,
+      })
+    } catch (error) {
+      console.error('Resume parsing failed:', error)
+      dispatch({ type: 'RESUME_PARSE_FAILED' })
+      setParseError("Couldn't parse that resume - check your connection and try again.")
+    }
   }
 
   return (
@@ -57,8 +65,12 @@ function ResumeSection() {
               status={resume.status === 'working' ? 'working' : 'idle'}
               workingText="Parsing your resume…"
               onFile={handleFile}
-              onRemove={() => dispatch({ type: 'REMOVE_RESUME' })}
+              onRemove={() => {
+                setParseError(null)
+                dispatch({ type: 'REMOVE_RESUME' })
+              }}
             />
+            {parseError && <p className="mt-2 text-sm text-destructive">{parseError}</p>}
           </div>
 
           <div>

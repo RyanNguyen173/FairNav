@@ -23,6 +23,7 @@ export function Step3FairIngestion() {
   const fair = useActiveFair()
   const [directoryMode, setDirectoryMode] = useState<'paste' | 'upload'>('upload')
   const [companyListFile, setCompanyListFile] = useState<File | null>(null)
+  const [analysisError, setAnalysisError] = useState<string | null>(null)
   // Best-effort: if this fair already has matched companies on mount, assume
   // they came from the current pasted text (a real File object can't be
   // restored across a reload, so upload mode always re-analyzes on its next
@@ -31,7 +32,10 @@ export function Step3FairIngestion() {
     fair.companies.length > 0 ? textSignature(fair.companyDirectoryText) : null,
   )
 
-  const canAnalyze = fair.name.trim().length > 0 && fair.ingestStatus !== 'working'
+  // The AI needs real exhibitor data - never let it run (or let Matches be
+  // reached) against a blank directory.
+  const hasDirectoryInput = Boolean(companyListFile) || fair.companyDirectoryText.trim().length > 0
+  const canAnalyze = fair.name.trim().length > 0 && hasDirectoryInput && fair.ingestStatus !== 'working'
   const hasResults = fair.companies.length > 0
   // Matches analyzeFair's own precedence (a file, when present, always wins
   // over pasted text) - so "already analyzed" reflects whichever one it
@@ -41,18 +45,29 @@ export function Step3FairIngestion() {
     : textSignature(fair.companyDirectoryText)
   const isCurrentAnalyzed = hasResults && analyzedSignature === currentSignature
 
-  const runAnalysis = async (file: File | null, text: string) => {
+  /** Returns whether the given input now has valid, analyzed results behind it. */
+  const runAnalysis = async (file: File | null, text: string): Promise<boolean> => {
     const signature = file ? fileSignature(file) : textSignature(text)
-    if (signature === analyzedSignature && hasResults) return
+    if (signature === analyzedSignature && hasResults) return true
+    setAnalysisError(null)
     setAnalyzedSignature(signature)
     dispatch({ type: 'FAIR_ANALYZING' })
-    const companies = await analyzeFair(text, file, profile)
-    dispatch({ type: 'COMPANIES_MATCHED', companies })
+    try {
+      const companies = await analyzeFair(text, file, profile)
+      dispatch({ type: 'COMPANIES_MATCHED', companies })
+      return true
+    } catch (error) {
+      console.error('Fair analysis failed:', error)
+      setAnalyzedSignature(null)
+      dispatch({ type: 'FAIR_ANALYSIS_FAILED' })
+      setAnalysisError("Couldn't analyze the directory - check your connection and try again.")
+      return false
+    }
   }
 
   const handleAnalyzeClick = async () => {
-    if (!isCurrentAnalyzed) await runAnalysis(companyListFile, fair.companyDirectoryText)
-    router.push('/matches')
+    const ready = isCurrentAnalyzed || (await runAnalysis(companyListFile, fair.companyDirectoryText))
+    if (ready) router.push('/matches')
   }
 
   const handleFileUpload = (file: File) => {
@@ -65,12 +80,13 @@ export function Step3FairIngestion() {
   const handleFileRemove = () => {
     setCompanyListFile(null)
     setAnalyzedSignature(null)
+    setAnalysisError(null)
     dispatch({ type: 'REMOVE_COMPANY_LIST_FILE' })
   }
 
   return (
     <>
-      <Header title="Fair details &amp; map" onBack={() => router.push('/')} />
+      <Header title="Fair details" onBack={() => router.push('/')} />
       <FairSubNav fair={fair} />
       <StepShell
         footer={
@@ -114,15 +130,6 @@ export function Step3FairIngestion() {
                 />
               </div>
             </SectionCard>
-
-            <UploadDropzone
-              label="Booth map"
-              helperText="Upload the fair's physical layout as an image or PDF."
-              accept="image/*,.pdf"
-              fileName={fair.mapFileName}
-              onFile={(file) => dispatch({ type: 'SET_MAP_FILE', fileName: file.name })}
-              onRemove={() => dispatch({ type: 'REMOVE_MAP_FILE' })}
-            />
           </div>
 
           <div className="mt-6 md:mt-0">
@@ -166,6 +173,14 @@ export function Step3FairIngestion() {
                 onFile={handleFileUpload}
                 onRemove={handleFileRemove}
               />
+            )}
+
+            {analysisError && <p className="mt-2 text-sm text-destructive">{analysisError}</p>}
+
+            {!hasDirectoryInput && (
+              <p className="mt-2 text-xs text-muted-foreground">
+                Add a company directory above before continuing - the AI needs real exhibitor data to work from.
+              </p>
             )}
 
             {fair.companies.length > 0 && (

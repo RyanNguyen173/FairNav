@@ -76,7 +76,7 @@ function jumpTo(id: string) {
 }
 
 function UnlockPrompt() {
-  const { unlockWithPassword, error, clearError, signOut } = useAuth()
+  const { session, unlockWithPassword, error, clearError, signOut } = useAuth()
   const [password, setPassword] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
@@ -96,6 +96,11 @@ function UnlockPrompt() {
         <div className="mb-6 flex flex-col items-center text-center">
           <img src="/logo-cat.png" alt="" className="mb-3 h-10 w-10 object-contain" />
           <h1 className="mb-1 text-lg font-bold text-foreground">Unlock your data</h1>
+          {session?.user?.email && (
+            <p className="mb-2 inline-flex items-center rounded-full bg-accent-wash px-3 py-1 font-mono text-xs text-accent-ink">
+              {session.user.email}
+            </p>
+          )}
           <p className="text-sm text-muted-foreground">
             Enter your password to decrypt your profile - we never store it ourselves, so this
             step can&apos;t be skipped even on a remembered device.
