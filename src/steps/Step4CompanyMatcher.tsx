@@ -90,7 +90,7 @@ export function Step4CompanyMatcher() {
 
   return (
     <>
-      <Header title="Ranked companies" onBack={() => router.push('/fair')} />
+      <Header title={fair.name || 'Untitled fair'} onBack={() => router.push('/fair')} />
       <FairSubNav fair={fair} />
       <StepShell
         footer={

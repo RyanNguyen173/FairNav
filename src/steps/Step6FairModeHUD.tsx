@@ -36,7 +36,9 @@ function useElapsedTime(startedAt: number | null) {
 export function Step6FairModeHUD() {
   const { dispatch } = useWizard()
   const router = useRouter()
-  const { companies, selectedCompanyIds, prep, fairMode } = useActiveFair()
+  const fair = useActiveFair()
+  const { name, companies, selectedCompanyIds, prep, fairMode } = fair
+  const title = name || 'Untitled fair'
 
   const queue = selectedCompanyIds
     .map((id) => companies.find((c) => c.id === id))
@@ -50,25 +52,28 @@ export function Step6FairModeHUD() {
   const companyPrep = company ? prep[company.id] : undefined
   const isVisited = company ? Boolean(fairMode.companyState[company.id]?.visited) : false
 
-  // Two distinct exits: this one leaves the fair's Fair Day session entirely
-  // (home page's Fair Day tab). Landing on the board instead (from the
-  // Previous boundary below) is a separate, deliberate choice - see below.
-  const exitFairMode = (landingTab: 'board' | 'day') => {
+  // Ends the live session (both exits below use this) and lands on the Fair
+  // Day tab - the normal "I'm done for now" exit.
+  const exitToFairDay = () => {
     dispatch({ type: 'EXIT_FAIR_MODE' })
-    // Home's own tab default only looks at whether a fair is live, which is
-    // false the instant we exit - flag which tab to land on so Home doesn't
-    // fall back to the wrong one.
-    sessionStorage.setItem('fairnav-home-tab', landingTab)
+    sessionStorage.setItem('fairnav-home-tab', 'day')
     sessionStorage.removeItem('fairnav-suppress-auto-fairday')
     router.push('/')
   }
+  // Backing out before the first company means "let me reconfigure this
+  // fair," not "show me every fair" - go straight to its own board (Details/
+  // Matches/Briefs), not the shared Fair Board tab.
+  const exitToThisFairsBoard = () => {
+    dispatch({ type: 'EXIT_FAIR_MODE' })
+    router.push('/fair')
+  }
 
   const goPrev = () => {
-    if (index === 0) return exitFairMode('board')
+    if (index === 0) return exitToThisFairsBoard()
     dispatch({ type: 'SET_FAIR_MODE_COMPANY', id: queue[index - 1].id })
   }
   const goNext = () => {
-    if (index === queue.length - 1) return exitFairMode('day')
+    if (index === queue.length - 1) return exitToFairDay()
     dispatch({ type: 'SET_FAIR_MODE_COMPANY', id: queue[index + 1].id })
   }
   const toggleVisited = () => {
@@ -79,7 +84,7 @@ export function Step6FairModeHUD() {
   if (!company) {
     return (
       <div className="flex flex-1 flex-col">
-        <Header title="Fair Day" onBack={() => exitFairMode('day')} />
+        <Header title={title} onBack={exitToFairDay} />
         <div className="mx-auto w-full max-w-md flex-1 px-4 pb-8 pt-8 text-center md:max-w-2xl md:px-8">
           <p className="text-sm text-muted-foreground">No companies selected for this fair yet.</p>
         </div>
@@ -89,7 +94,7 @@ export function Step6FairModeHUD() {
 
   return (
     <div className="flex flex-1 flex-col">
-      <Header title="Fair Day" onBack={() => exitFairMode('day')} />
+      <Header title={title} onBack={exitToFairDay} />
 
       <div className="border-b border-border bg-background px-4 py-3 md:px-8">
         <div className="mx-auto max-w-md md:max-w-2xl">

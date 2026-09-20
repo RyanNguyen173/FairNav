@@ -5,9 +5,14 @@ import type { FairProfile } from '../wizard/types'
 import { useWizard } from '../wizard/WizardContext'
 import { computeFairStatus, dayDelta, TAG_CLASS } from './fairUtils'
 
-/** Has a queue to walk, isn't already live. Briefs are optional (generated on demand), so this only needs a selection, not generated prep. */
+/** Live the moment fair mode is actually running, or the moment the fair's own date arrives - not just once someone has clicked in. */
+function isFairLive(fair: FairProfile): boolean {
+  return fair.fairMode.active || (fair.date ? dayDelta(fair.date) === 0 : false)
+}
+
+/** Has a queue to walk and isn't live. Briefs are optional (generated on demand), so this only needs a selection, not generated prep. */
 function readyFairs(fairProfiles: FairProfile[]): FairProfile[] {
-  return fairProfiles.filter((fair) => fair.selectedCompanyIds.length > 0 && !fair.fairMode.active)
+  return fairProfiles.filter((fair) => fair.selectedCompanyIds.length > 0 && !isFairLive(fair))
 }
 
 function startFairMode(
@@ -16,7 +21,9 @@ function startFairMode(
   fair: FairProfile,
 ) {
   dispatch({ type: 'SET_ACTIVE_FAIR', id: fair.id })
-  dispatch({ type: 'ENTER_FAIR_MODE' })
+  // Already running (e.g. a fair whose date is today, reopened later the
+  // same day) - don't reset the elapsed timer, just resume it.
+  if (!fair.fairMode.active) dispatch({ type: 'ENTER_FAIR_MODE' })
   sessionStorage.removeItem('fairnav-suppress-auto-fairday')
   router.push('/fair-day')
 }
@@ -50,7 +57,7 @@ function LiveCard({ fair }: { fair: FairProfile }) {
       <div className="mt-auto flex flex-col gap-2.5 pt-2">
         <DayCardMeta fair={fair} />
         <Button fullWidth onClick={() => startFairMode(dispatch, router, fair)}>
-          Continue fair mode
+          {fair.fairMode.active ? 'Continue fair mode' : 'Start fair mode'}
         </Button>
       </div>
     </div>
@@ -108,18 +115,24 @@ function CompletedCard({ fair }: { fair: FairProfile }) {
 export function FairDay() {
   const { state, dispatch } = useWizard()
   const router = useRouter()
-  const liveFair = state.fairProfiles.find((fair) => fair.fairMode.active)
+  // A fair whose date has arrived shows in "Live now" too (see isFairLive)
+  // so it's visible without requiring a click first, but only a session
+  // someone has actually started auto-bounces you straight into the HUD -
+  // arriving on this tab should never force you into a fair you haven't
+  // opted into yet.
+  const activeLiveFair = state.fairProfiles.find((fair) => fair.fairMode.active)
+  const liveFairs = state.fairProfiles.filter((fair) => fair.selectedCompanyIds.length > 0 && isFairLive(fair))
 
   // Step6FairModeHUD reads the wizard's active fair, not a fair passed
   // directly to it - make sure they agree before sending the visitor there.
   useEffect(() => {
-    if (!liveFair) return
-    if (state.activeFairId !== liveFair.id) {
-      dispatch({ type: 'SET_ACTIVE_FAIR', id: liveFair.id })
+    if (!activeLiveFair) return
+    if (state.activeFairId !== activeLiveFair.id) {
+      dispatch({ type: 'SET_ACTIVE_FAIR', id: activeLiveFair.id })
       return
     }
     router.push('/fair-day')
-  }, [liveFair, state.activeFairId, dispatch, router])
+  }, [activeLiveFair, state.activeFairId, dispatch, router])
 
   const ready = readyFairs(state.fairProfiles)
   const upcoming = ready.filter((fair) => computeFairStatus(fair) !== 'completed')
@@ -130,9 +143,11 @@ export function FairDay() {
       <div className="flex flex-col gap-5">
         <div className="flex flex-col gap-3">
           <div className="font-mono text-[11px] uppercase tracking-[0.08em] text-ink-subtle">Live now</div>
-          {liveFair ? (
+          {liveFairs.length > 0 ? (
             <div className="fn-grid grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <LiveCard fair={liveFair} />
+              {liveFairs.map((fair) => (
+                <LiveCard key={fair.id} fair={fair} />
+              ))}
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center gap-3 rounded-2xl bg-card p-16 text-center shadow-hairline">

@@ -98,7 +98,7 @@ export function Step3FairIngestion() {
 
   return (
     <>
-      <Header title="Fair details" onBack={() => router.push('/')} />
+      <Header title={fair.name || 'Untitled fair'} onBack={() => router.push('/')} />
       <FairSubNav fair={fair} />
       <StepShell
         footer={

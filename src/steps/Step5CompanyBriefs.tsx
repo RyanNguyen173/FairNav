@@ -224,7 +224,7 @@ export function Step5CompanyBriefs() {
 
   return (
     <>
-      <Header title="Briefs" onBack={() => router.push('/matches')} />
+      <Header title={fair.name || 'Untitled fair'} onBack={() => router.push('/matches')} />
       <FairSubNav fair={fair} />
       <StepShell
         footer={
