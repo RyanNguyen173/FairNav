@@ -71,17 +71,6 @@ export async function parseResume(file: File): Promise<ParsedResume> {
   }
 }
 
-/** Evenly spaces company pins across the booth-route map, roughly grid-shaped regardless of count. */
-function boothCoordinatesForIndex(index: number, total: number) {
-  const columns = Math.max(3, Math.ceil(Math.sqrt(total)))
-  const row = Math.floor(index / columns)
-  const col = index % columns
-  const rows = Math.ceil(total / columns)
-  const x = ((col + 0.5) / columns) * 82 + 9
-  const y = ((row + 0.5) / Math.max(rows, 1)) * 78 + 10
-  return { x, y }
-}
-
 interface MergedCompany {
   companyName: string
   boothNumbers: string[]
@@ -159,15 +148,10 @@ export async function analyzeFair(
   })
   scored.sort((a, b) => b.matchScore - a.matchScore)
 
-  return scored.map((company, index) => {
-    const { x, y } = boothCoordinatesForIndex(index, scored.length)
-    return {
-      ...company,
-      id: `company-${index}-${company.companyName.replace(/\s+/g, '-').toLowerCase()}`,
-      x,
-      y,
-    }
-  })
+  return scored.map((company, index) => ({
+    ...company,
+    id: `company-${index}-${company.companyName.replace(/\s+/g, '-').toLowerCase()}`,
+  }))
 }
 
 type PitchResult = CompanyPrep & { companyName: string }

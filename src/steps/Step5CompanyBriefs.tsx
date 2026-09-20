@@ -1,4 +1,6 @@
 import {
+  ArrowDown,
+  ArrowUp,
   Briefcase,
   Buildings,
   ChatCircleDots,
@@ -16,42 +18,9 @@ import { BoothNumbers } from '../components/BoothNumbers'
 import { Button } from '../components/Button'
 import { FairSubNav } from '../components/FairSubNav'
 import { Header } from '../components/Header'
+import { ResearchList } from '../components/ResearchList'
 import { SectionCard, StepShell } from '../components/StepShell'
 import { useActiveFair, useWizard } from '../wizard/WizardContext'
-
-/** A research field shown as a chip list, with a "not found" fallback for a legitimately empty result. */
-function ResearchList({
-  icon: Icon,
-  label,
-  items,
-}: {
-  icon: typeof MapPin
-  label: string
-  items: string[]
-}) {
-  return (
-    <SectionCard>
-      <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
-        <Icon size={16} weight="fill" className="text-accent-ink" aria-hidden="true" />
-        {label}
-      </h3>
-      {items.length > 0 ? (
-        <div className="flex flex-wrap gap-1.5">
-          {items.map((item) => (
-            <span
-              key={item}
-              className="rounded-full border border-border bg-background px-2.5 py-1 text-xs font-medium text-foreground"
-            >
-              {item}
-            </span>
-          ))}
-        </div>
-      ) : (
-        <p className="text-sm text-muted-foreground">Not found.</p>
-      )}
-    </SectionCard>
-  )
-}
 
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false)
@@ -92,7 +61,9 @@ export function Step5CompanyBriefs() {
     dispatch({ type: 'ENTER_FAIR_MODE' })
     router.push('/')
   }
-  const selectedCompanies = companies.filter((c) => selectedCompanyIds.includes(c.id))
+  const selectedCompanies = selectedCompanyIds
+    .map((id) => companies.find((c) => c.id === id))
+    .filter((c): c is (typeof companies)[number] => Boolean(c))
   const [activeId, setActiveId] = useState(selectedCompanies[0]?.id)
   const activeCompany = selectedCompanies.find((c) => c.id === activeId) ?? selectedCompanies[0]
   const activePrep = activeCompany ? prep[activeCompany.id] : undefined
@@ -118,24 +89,46 @@ export function Step5CompanyBriefs() {
             role="tablist"
             aria-label="Selected companies"
           >
-            {selectedCompanies.map((company) => {
+            {selectedCompanies.map((company, index) => {
               const selected = company.id === activeCompany?.id
               return (
-                <button
-                  key={company.id}
-                  type="button"
-                  role="tab"
-                  aria-selected={selected}
-                  onClick={() => setActiveId(company.id)}
-                  className={[
-                    'min-h-9 shrink-0 cursor-pointer rounded-full border px-4 text-sm font-semibold transition-colors duration-150',
-                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                    'md:w-full md:text-left md:rounded-xl',
-                    selected ? 'border-primary bg-primary text-on-primary' : 'border-border bg-card text-card-foreground',
-                  ].join(' ')}
-                >
-                  {company.companyName || 'Unlisted company'}
-                </button>
+                <div key={company.id} className="flex shrink-0 items-center gap-1.5 md:w-full">
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={selected}
+                    onClick={() => setActiveId(company.id)}
+                    className={[
+                      'min-h-9 shrink-0 cursor-pointer rounded-full border px-4 text-sm font-semibold transition-colors duration-150',
+                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                      'md:w-full md:flex-1 md:text-left md:rounded-xl',
+                      selected ? 'border-primary bg-primary text-on-primary' : 'border-border bg-card text-card-foreground',
+                    ].join(' ')}
+                  >
+                    <span className="mr-1.5 opacity-70">{index + 1}.</span>
+                    {company.companyName || 'Unlisted company'}
+                  </button>
+                  <div className="flex shrink-0 flex-col gap-0.5">
+                    <button
+                      type="button"
+                      aria-label={`Move ${company.companyName || 'company'} up`}
+                      disabled={index === 0}
+                      onClick={() => dispatch({ type: 'MOVE_SELECTED_COMPANY', id: company.id, direction: 'up' })}
+                      className="flex h-4 w-6 cursor-pointer items-center justify-center rounded text-muted-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      <ArrowUp size={12} weight="bold" aria-hidden="true" />
+                    </button>
+                    <button
+                      type="button"
+                      aria-label={`Move ${company.companyName || 'company'} down`}
+                      disabled={index === selectedCompanies.length - 1}
+                      onClick={() => dispatch({ type: 'MOVE_SELECTED_COMPANY', id: company.id, direction: 'down' })}
+                      className="flex h-4 w-6 cursor-pointer items-center justify-center rounded text-muted-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      <ArrowDown size={12} weight="bold" aria-hidden="true" />
+                    </button>
+                  </div>
+                </div>
               )
             })}
           </div>

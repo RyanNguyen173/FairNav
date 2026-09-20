@@ -66,9 +66,6 @@ export interface Company {
   /** Primary industry, compared against the student's profile interests to highlight a match in the UI. */
   industry: string
   openRoles: string[]
-  /** 0-100 coordinates on the booth map */
-  x: number
-  y: number
   /** 0-100, computed once companies are matched against the profile */
   matchScore: number
 }

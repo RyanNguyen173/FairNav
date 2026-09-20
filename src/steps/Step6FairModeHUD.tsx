@@ -1,11 +1,24 @@
-import { CheckCircle, SignOut } from '@phosphor-icons/react'
+import {
+  Briefcase,
+  Buildings,
+  CaretDown,
+  CaretUp,
+  ChatCircleDots,
+  CheckCircle,
+  GraduationCap,
+  Heart,
+  Lightbulb,
+  MapPin,
+  SignOut,
+  Tag,
+} from '@phosphor-icons/react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { BottomSheet } from '../components/BottomSheet'
 import { Button } from '../components/Button'
-import { RouteMap } from '../components/RouteMap'
+import { ResearchList } from '../components/ResearchList'
 import { SectionCard } from '../components/StepShell'
-import type { Company } from '../wizard/types'
+import type { Company, CompanyPrep } from '../wizard/types'
 import { useActiveFair, useWizard } from '../wizard/WizardContext'
 
 function useElapsedTime(startedAt: number | null) {
@@ -25,23 +38,69 @@ function useElapsedTime(startedAt: number | null) {
   return `${minutes}:${seconds}`
 }
 
+/** The same research fields shown on the Briefs page, reused here so "See more" never drifts out of sync with it. */
+function CompanyResearch({ prep }: { prep: CompanyPrep }) {
+  return (
+    <div className="mt-3 space-y-3 border-t border-border pt-3">
+      <SectionCard>
+        <h4 className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-foreground">
+          <Buildings size={14} weight="fill" className="text-accent-ink" aria-hidden="true" />
+          Company overview
+        </h4>
+        <p className="text-sm leading-relaxed text-card-foreground">{prep.overview || 'Not found.'}</p>
+      </SectionCard>
+      <ResearchList icon={MapPin} label="Locations" items={prep.locations} />
+      <ResearchList icon={Heart} label="Company values" items={prep.values} />
+      <ResearchList icon={Tag} label="Industries" items={prep.industries} />
+      <ResearchList icon={GraduationCap} label="Majors they hire" items={prep.majors} />
+      <ResearchList icon={Briefcase} label="Open positions" items={prep.positions} />
+      <SectionCard>
+        <h4 className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-foreground">
+          <Lightbulb size={14} weight="fill" className="text-accent-ink" aria-hidden="true" />
+          Tailored elevator pitch
+        </h4>
+        <p className="text-sm leading-relaxed text-card-foreground">{prep.elevatorPitch}</p>
+      </SectionCard>
+      <SectionCard>
+        <h4 className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-foreground">
+          <ChatCircleDots size={14} weight="fill" className="text-primary" aria-hidden="true" />
+          Strategic recruiter questions
+        </h4>
+        <ul className="space-y-2">
+          {prep.questions.map((question, index) => (
+            <li key={index} className="text-sm leading-relaxed text-card-foreground">
+              {question}
+            </li>
+          ))}
+        </ul>
+      </SectionCard>
+    </div>
+  )
+}
+
 function QueueCard({
   company,
+  prep,
   position,
   visited,
   note,
   onOpenDetails,
   onMarkVisited,
+  onUnvisit,
   onNoteChange,
 }: {
   company: Company
+  prep: CompanyPrep | undefined
   position: number | null
   visited: boolean
   note: string
   onOpenDetails: () => void
   onMarkVisited: () => void
+  onUnvisit: () => void
   onNoteChange: (value: string) => void
 }) {
+  const [expanded, setExpanded] = useState(false)
+
   return (
     <SectionCard className={visited ? 'opacity-70' : ''}>
       <button type="button" onClick={onOpenDetails} className="flex w-full cursor-pointer items-start gap-3 text-left">
@@ -61,6 +120,22 @@ function QueueCard({
         </span>
       </button>
 
+      {prep && (
+        <button
+          type="button"
+          onClick={() => setExpanded((value) => !value)}
+          className="mt-2 flex cursor-pointer items-center gap-1 text-xs font-semibold text-accent-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          {expanded ? 'See less' : 'See more'}
+          {expanded ? (
+            <CaretUp size={12} weight="bold" aria-hidden="true" />
+          ) : (
+            <CaretDown size={12} weight="bold" aria-hidden="true" />
+          )}
+        </button>
+      )}
+      {expanded && prep && <CompanyResearch prep={prep} />}
+
       <label className="mt-3 block">
         <span className="mb-1 block text-xs font-medium text-muted-foreground">Quick notes</span>
         <textarea
@@ -72,7 +147,11 @@ function QueueCard({
         />
       </label>
 
-      {!visited && (
+      {visited ? (
+        <Button variant="secondary" fullWidth className="mt-3" onClick={onUnvisit}>
+          Unvisit
+        </Button>
+      ) : (
         <Button variant="secondary" fullWidth className="mt-3" onClick={onMarkVisited}>
           Mark as Visited
         </Button>
@@ -113,7 +192,9 @@ export function Step6FairModeHUD() {
     router.push('/briefs')
   }
 
-  const queue = companies.filter((c) => selectedCompanyIds.includes(c.id))
+  const queue = selectedCompanyIds
+    .map((id) => companies.find((c) => c.id === id))
+    .filter((c): c is Company => Boolean(c))
   const unvisitedQueue = queue.filter((c) => !fairMode.companyState[c.id]?.visited)
   const visitedCount = queue.length - unvisitedQueue.length
   const elapsed = useElapsedTime(fairMode.startedAt)
@@ -149,14 +230,6 @@ export function Step6FairModeHUD() {
       <div className="mx-auto w-full max-w-md flex-1 px-4 pb-8 pt-4 md:max-w-5xl md:px-8">
         <div className="md:grid md:grid-cols-[1fr_340px] md:items-start md:gap-6">
           <div>
-            <div className="mb-5 h-56">
-              <RouteMap
-                allCompanies={companies}
-                queue={queue}
-                visitedIds={new Set(queue.filter((c) => fairMode.companyState[c.id]?.visited).map((c) => c.id))}
-              />
-            </div>
-
             <h2 className="mb-3 text-sm font-semibold text-foreground">Your route</h2>
             <div className="space-y-3">
               {queue.map((company) => {
@@ -167,11 +240,13 @@ export function Step6FairModeHUD() {
                   <QueueCard
                     key={company.id}
                     company={company}
+                    prep={prep[company.id]}
                     position={position}
                     visited={visited}
                     note={companyState?.note ?? ''}
                     onOpenDetails={() => setDetailsId(company.id)}
-                    onMarkVisited={() => dispatch({ type: 'MARK_VISITED', id: company.id })}
+                    onMarkVisited={() => dispatch({ type: 'SET_VISITED', id: company.id, visited: true })}
+                    onUnvisit={() => dispatch({ type: 'SET_VISITED', id: company.id, visited: false })}
                     onNoteChange={(value) => dispatch({ type: 'SET_NOTE', id: company.id, note: value })}
                   />
                 )

@@ -57,10 +57,11 @@ type Action =
   | { type: 'FAIR_ANALYSIS_FAILED' }
   | { type: 'COMPANIES_MATCHED'; companies: Company[] }
   | { type: 'TOGGLE_COMPANY_SELECTION'; id: string }
+  | { type: 'MOVE_SELECTED_COMPANY'; id: string; direction: 'up' | 'down' }
   | { type: 'PREP_GENERATED'; prep: Record<string, CompanyPrep> }
   | { type: 'ENTER_FAIR_MODE' }
   | { type: 'EXIT_FAIR_MODE' }
-  | { type: 'MARK_VISITED'; id: string }
+  | { type: 'SET_VISITED'; id: string; visited: boolean }
   | { type: 'SET_NOTE'; id: string; note: string }
 
 function getActiveFair(state: WizardState): FairProfile | undefined {
@@ -311,6 +312,18 @@ function reducer(state: WizardState, action: Action): WizardState {
       }))
     }
 
+    case 'MOVE_SELECTED_COMPANY': {
+      const activeFair = getActiveFair(state)
+      if (!activeFair) return state
+      const ids = activeFair.selectedCompanyIds
+      const from = ids.indexOf(action.id)
+      const to = action.direction === 'up' ? from - 1 : from + 1
+      if (from === -1 || to < 0 || to >= ids.length) return state
+      const reordered = [...ids]
+      ;[reordered[from], reordered[to]] = [reordered[to], reordered[from]]
+      return updateActiveFair(state, (fair) => ({ ...fair, selectedCompanyIds: reordered }))
+    }
+
     case 'PREP_GENERATED':
       return updateActiveFair(state, (fair) => {
         const companyState = { ...fair.fairMode.companyState }
@@ -337,7 +350,7 @@ function reducer(state: WizardState, action: Action): WizardState {
         fairMode: { ...fair.fairMode, active: false },
       }))
 
-    case 'MARK_VISITED':
+    case 'SET_VISITED':
       return updateActiveFair(state, (fair) => ({
         ...fair,
         fairMode: {
@@ -346,8 +359,8 @@ function reducer(state: WizardState, action: Action): WizardState {
             ...fair.fairMode.companyState,
             [action.id]: {
               ...fair.fairMode.companyState[action.id],
-              visited: true,
-              visitedAt: Date.now(),
+              visited: action.visited,
+              visitedAt: action.visited ? Date.now() : null,
             },
           },
         },
@@ -421,8 +434,6 @@ function normalizeCompany(raw: Record<string, unknown>): Company {
     summary: (raw.summary as string) ?? '',
     industry: (raw.industry as string) ?? '',
     openRoles: Array.isArray(raw.openRoles) ? (raw.openRoles as string[]) : [],
-    x: typeof raw.x === 'number' ? raw.x : 0,
-    y: typeof raw.y === 'number' ? raw.y : 0,
     matchScore: typeof raw.matchScore === 'number' ? raw.matchScore : 0,
   }
 }
