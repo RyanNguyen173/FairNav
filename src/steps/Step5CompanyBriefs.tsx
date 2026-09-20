@@ -79,16 +79,41 @@ export function Step5CompanyBriefs() {
   // logic drives both.
   const listRef = useRef<HTMLDivElement>(null)
   const rowRefs = useRef(new Map<string, HTMLDivElement>())
-  const dragRef = useRef<{ id: string; axis: 'x' | 'y'; start: number; pointerId: number } | null>(null)
+  const dragRef = useRef<{ id: string; axis: 'x' | 'y'; start: number; lastClient: number; pointerId: number } | null>(
+    null,
+  )
   const flipSnapshotRef = useRef<Map<string, DOMRect> | null>(null)
 
   useLayoutEffect(() => {
     const snapshot = flipSnapshotRef.current
     if (!snapshot) return
     flipSnapshotRef.current = null
+    const drag = dragRef.current
+
     snapshot.forEach((before, id) => {
       const el = rowRefs.current.get(id)
       if (!el) return
+
+      // The dragged row itself reordering moves its own untransformed slot,
+      // so its existing translate*(delta) - measured against the OLD slot -
+      // would make it jump instead of keep tracking the pointer. Recompute
+      // the transform against the row's new slot (rather than resetting it
+      // to identity like the other, merely-displaced rows below), and
+      // recalibrate `start` so the next raw pointermove delta stays
+      // continuous with this corrected value.
+      if (drag && id === drag.id) {
+        el.style.transition = 'none'
+        el.style.transform = ''
+        const natural = el.getBoundingClientRect()
+        const corrected = drag.axis === 'y' ? before.top - natural.top : before.left - natural.left
+        el.style.transform = drag.axis === 'y' ? `translateY(${corrected}px)` : `translateX(${corrected}px)`
+        drag.start = drag.lastClient - corrected
+        requestAnimationFrame(() => {
+          el.style.transition = ''
+        })
+        return
+      }
+
       const after = el.getBoundingClientRect()
       const dx = before.left - after.left
       const dy = before.top - after.top
@@ -120,7 +145,8 @@ export function Step5CompanyBriefs() {
     if (!container) return
     const axis = getComputedStyle(container).flexDirection === 'column' ? 'y' : 'x'
     const pointerId = event.pointerId
-    dragRef.current = { id, axis, start: axis === 'y' ? event.clientY : event.clientX, pointerId }
+    const startClient = axis === 'y' ? event.clientY : event.clientX
+    dragRef.current = { id, axis, start: startClient, lastClient: startClient, pointerId }
     const row = rowRefs.current.get(id)
     if (row) row.style.zIndex = '10'
     event.preventDefault()
@@ -132,6 +158,7 @@ export function Step5CompanyBriefs() {
       if (!draggedRow || !container) return
 
       const client = drag.axis === 'y' ? moveEvent.clientY : moveEvent.clientX
+      drag.lastClient = client
       const delta = client - drag.start
       draggedRow.style.transform = drag.axis === 'y' ? `translateY(${delta}px)` : `translateX(${delta}px)`
 
@@ -151,7 +178,7 @@ export function Step5CompanyBriefs() {
         const before = new Map<string, DOMRect>()
         rows.forEach((el) => {
           const cid = el.dataset.companyId
-          if (cid && cid !== drag.id) before.set(cid, el.getBoundingClientRect())
+          if (cid) before.set(cid, el.getBoundingClientRect())
         })
         flipSnapshotRef.current = before
         dispatch({ type: 'REORDER_SELECTED_COMPANY', id: drag.id, toIndex: i })
