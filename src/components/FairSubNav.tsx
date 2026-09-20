@@ -2,7 +2,6 @@
 
 import { usePathname, useRouter } from 'next/navigation'
 import type { FairProfile } from '../wizard/types'
-import { useWizard } from '../wizard/WizardContext'
 
 interface FairTab {
   href: string
@@ -18,22 +17,14 @@ const FAIR_TABS: FairTab[] = [
 
 /**
  * Persistent tab strip for jumping between one fair's own pages (details,
- * matches, briefs, fair day) without going back through Home each time.
- * Shown below Header on every per-fair page.
+ * matches, briefs) without going back through Home each time. Shown below
+ * Header on every per-fair page. Fair Day is deliberately not one of these
+ * tabs - the only way in is Briefs' "Enter Live Fair Mode" button, so there's
+ * exactly one door instead of two disagreeing ones.
  */
 export function FairSubNav({ fair }: { fair: FairProfile }) {
   const router = useRouter()
   const pathname = usePathname()
-  const { dispatch } = useWizard()
-
-  const fairDayReady = Object.keys(fair.prep).length > 0
-  const fairDayEnabled = fair.fairMode.active || fairDayReady
-
-  const handleFairDay = () => {
-    if (!fairDayEnabled) return
-    if (!fair.fairMode.active) dispatch({ type: 'ENTER_FAIR_MODE' })
-    router.push('/')
-  }
 
   const tabClass = (selected: boolean, enabled: boolean) =>
     [
@@ -69,16 +60,6 @@ export function FairSubNav({ fair }: { fair: FairProfile }) {
             </button>
           )
         })}
-        <button
-          type="button"
-          role="tab"
-          aria-selected={false}
-          disabled={!fairDayEnabled}
-          onClick={handleFairDay}
-          className={tabClass(false, fairDayEnabled)}
-        >
-          Fair Day
-        </button>
       </div>
     </div>
   )

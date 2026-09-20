@@ -2,6 +2,7 @@ import {
   Briefcase,
   Buildings,
   CaretDown,
+  CaretLeft,
   CaretUp,
   ChatCircleDots,
   CheckCircle,
@@ -9,13 +10,13 @@ import {
   Heart,
   Lightbulb,
   MapPin,
-  SignOut,
   Tag,
 } from '@phosphor-icons/react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { BottomSheet } from '../components/BottomSheet'
 import { Button } from '../components/Button'
+import { Header } from '../components/Header'
 import { ResearchList } from '../components/ResearchList'
 import { SectionCard } from '../components/StepShell'
 import type { Company, CompanyPrep } from '../wizard/types'
@@ -187,10 +188,14 @@ export function Step6FairModeHUD() {
   const router = useRouter()
   const { companies, selectedCompanyIds, prep, fairMode } = useActiveFair()
   const [detailsId, setDetailsId] = useState<string | null>(null)
+  // Two distinct exits: this one leaves the fair's Fair Day session entirely
+  // (home page's Fair Day tab, no fair live). Backing to the dashboard below
+  // just steps over to Briefs and leaves fair mode running underneath.
   const exitFairMode = () => {
     dispatch({ type: 'EXIT_FAIR_MODE' })
-    router.push('/briefs')
+    router.push('/')
   }
+  const backToDashboard = () => router.push('/briefs')
 
   const queue = selectedCompanyIds
     .map((id) => companies.find((c) => c.id === id))
@@ -208,24 +213,16 @@ export function Step6FairModeHUD() {
 
   return (
     <div className="flex flex-1 flex-col">
-      <header className="sticky top-0 z-20 border-b border-border bg-background/95 px-4 py-3 backdrop-blur md:px-8">
-        <div className="mx-auto flex max-w-md items-center justify-between gap-3 md:max-w-5xl">
-          <div>
-            <p className="text-xs font-medium text-muted-foreground">Fair Mode · {elapsed}</p>
-            <p className="text-sm font-bold text-foreground">
-              {visitedCount} of {queue.length} Visited
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={exitFairMode}
-            aria-label="Exit Fair Mode"
-            className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <SignOut size={18} weight="bold" aria-hidden="true" />
-          </button>
+      <Header title="Fair Mode" onBack={exitFairMode} />
+
+      <div className="border-b border-border bg-background px-4 py-3 md:px-8">
+        <div className="mx-auto max-w-md md:max-w-5xl">
+          <p className="text-xs font-medium text-muted-foreground">Fair Mode · {elapsed}</p>
+          <p className="text-sm font-bold text-foreground">
+            {visitedCount} of {queue.length} Visited
+          </p>
         </div>
-      </header>
+      </div>
 
       <div className="mx-auto w-full max-w-md flex-1 px-4 pb-8 pt-4 md:max-w-5xl md:px-8">
         <div className="md:grid md:grid-cols-[1fr_340px] md:items-start md:gap-6">
@@ -264,6 +261,18 @@ export function Step6FairModeHUD() {
               <p className="text-sm text-muted-foreground">Select a booth to see its pitch script and questions.</p>
             )}
           </div>
+        </div>
+      </div>
+
+      <div className="sticky bottom-0 border-t border-border bg-background/95 px-4 py-3 backdrop-blur md:px-8">
+        <div className="mx-auto flex max-w-md justify-start md:max-w-5xl">
+          <Button
+            variant="secondary"
+            icon={<CaretLeft size={15} weight="bold" aria-hidden="true" />}
+            onClick={backToDashboard}
+          >
+            Back to dashboard
+          </Button>
         </div>
       </div>
 
