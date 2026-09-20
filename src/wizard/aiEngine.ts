@@ -157,9 +157,11 @@ export async function analyzeFair(
 type PitchResult = CompanyPrep & { companyName: string }
 
 /**
- * One request covering every selected company, rather than one request per
- * company - fewer concurrent calls against the same API key, less latency,
- * lower chance of hitting a transient rate limit / overload error.
+ * Takes one request covering every company passed in, rather than one
+ * request per company, when called with more than one - fewer concurrent
+ * calls against the same API key, less latency, lower chance of hitting a
+ * transient rate limit / overload error. Callers generate briefs on demand,
+ * so this is often called with a single company.
  */
 export async function generatePreps(
   profile: ProfileData,

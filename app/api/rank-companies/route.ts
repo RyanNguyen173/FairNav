@@ -21,6 +21,7 @@ export async function POST(request: NextRequest) {
       config: {
         responseMimeType: 'application/json',
         responseSchema: RANK_COMPANIES_SCHEMA,
+        temperature: 0.1,
       },
     })
 

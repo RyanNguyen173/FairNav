@@ -306,7 +306,7 @@ export default function AiPlaygroundPage() {
                 tab === value ? 'border-primary bg-primary text-on-primary' : 'border-border bg-card text-card-foreground',
               ].join(' ')}
             >
-              {value === 'rank' ? 'Rank companies' : 'Generate pitches'}
+              {value === 'rank' ? 'Rank companies' : 'Generate Brief'}
             </button>
           ))}
         </div>

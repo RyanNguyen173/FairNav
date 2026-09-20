@@ -58,7 +58,7 @@ function CompanyResearch({ prep }: { prep: CompanyPrep }) {
       <SectionCard>
         <h4 className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-foreground">
           <Lightbulb size={14} weight="fill" className="text-accent-ink" aria-hidden="true" />
-          Tailored elevator pitch
+          Why this company fits you
         </h4>
         <p className="text-sm leading-relaxed text-card-foreground">{prep.elevatorPitch}</p>
       </SectionCard>
@@ -166,7 +166,7 @@ function PitchDetails({ company, pitch }: { company: Company; pitch: { elevatorP
     <div className="space-y-4">
       <p className="text-xs text-muted-foreground">Booth {company.boothNumbers.join(', ')}</p>
       <div>
-        <h3 className="mb-2 text-sm font-semibold text-foreground">Elevator pitch</h3>
+        <h3 className="mb-2 text-sm font-semibold text-foreground">Why this fits you</h3>
         <p className="text-sm leading-relaxed text-card-foreground">{pitch.elevatorPitch}</p>
       </div>
       <div>
@@ -269,7 +269,7 @@ export function Step6FairModeHUD() {
                 <PitchDetails company={activeCompany} pitch={activePrep} />
               </>
             ) : (
-              <p className="text-sm text-muted-foreground">Select a booth to see its pitch script and questions.</p>
+              <p className="text-sm text-muted-foreground">Select a booth to see its brief and questions.</p>
             )}
           </div>
         </div>

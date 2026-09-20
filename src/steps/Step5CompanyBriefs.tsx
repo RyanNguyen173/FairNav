@@ -19,6 +19,8 @@ import { FairSubNav } from '../components/FairSubNav'
 import { Header } from '../components/Header'
 import { ResearchList } from '../components/ResearchList'
 import { SectionCard, StepShell } from '../components/StepShell'
+import { generatePreps } from '../wizard/aiEngine'
+import type { Company } from '../wizard/types'
 import { useActiveFair, useWizard } from '../wizard/WizardContext'
 
 /** An element's true resting position, ignoring any in-flight animation transform (e.g. a FLIP still mid-flight). */
@@ -61,7 +63,7 @@ function CopyButton({ text }: { text: string }) {
 }
 
 export function Step5CompanyBriefs() {
-  const { dispatch } = useWizard()
+  const { state, dispatch } = useWizard()
   const router = useRouter()
   const fair = useActiveFair()
   const { companies, selectedCompanyIds, prep } = fair
@@ -78,6 +80,25 @@ export function Step5CompanyBriefs() {
   const [activeId, setActiveId] = useState(selectedCompanies[0]?.id)
   const activeCompany = selectedCompanies.find((c) => c.id === activeId) ?? selectedCompanies[0]
   const activePrep = activeCompany ? prep[activeCompany.id] : undefined
+
+  // Briefs are generated per-company, on demand, rather than all at once for
+  // every selected company - a student may only want to spend the AI call on
+  // the companies they're actually prioritizing.
+  const [generatingId, setGeneratingId] = useState<string | null>(null)
+  const [generateError, setGenerateError] = useState<string | null>(null)
+  const handleGenerateBrief = async (company: Company) => {
+    setGeneratingId(company.id)
+    setGenerateError(null)
+    try {
+      const result = await generatePreps(state.profile, [company])
+      dispatch({ type: 'PREP_GENERATED', prep: result })
+    } catch (error) {
+      console.error('Brief generation failed:', error)
+      setGenerateError("Couldn't generate this brief - check your connection and try again.")
+    } finally {
+      setGeneratingId(null)
+    }
+  }
 
   // Drag-to-reorder for the queue below: a dedicated handle (not the whole
   // chip, which already selects the active company on click) drives it via
@@ -234,7 +255,7 @@ export function Step5CompanyBriefs() {
 
   return (
     <>
-      <Header title="Briefs &amp; pitch prep" onBack={() => router.push('/matches')} />
+      <Header title="Briefs" onBack={() => router.push('/matches')} />
       <FairSubNav fair={fair} />
       <StepShell
         footer={
@@ -244,7 +265,7 @@ export function Step5CompanyBriefs() {
         }
       >
         <p className="mb-5 text-sm text-muted-foreground">
-          Review your personalized pitch and questions for each company before you walk the floor.
+          Generate a personalized brief and questions for each company before you walk the floor.
         </p>
 
         <div className="md:grid md:grid-cols-[220px_1fr] md:gap-6">
@@ -298,59 +319,77 @@ export function Step5CompanyBriefs() {
             })}
           </div>
 
-          {activeCompany && activePrep && (
+          {activeCompany && (
             <div role="tabpanel">
               <div className="mb-5">
                 <BoothNumbers boothNumbers={activeCompany.boothNumbers} />
                 <h2 className="text-lg font-bold text-foreground">{activeCompany.companyName || 'Unlisted company'}</h2>
               </div>
 
-              <div className="mb-5">
+              {!activePrep ? (
                 <SectionCard>
-                  <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
-                    <Buildings size={16} weight="fill" className="text-accent-ink" aria-hidden="true" />
-                    Company overview
-                  </h3>
-                  <p className="text-sm leading-relaxed text-card-foreground">
-                    {activePrep.overview || 'Not found.'}
+                  <p className="mb-3 text-sm text-muted-foreground">
+                    No brief generated yet for this company.
                   </p>
+                  {generateError && <p className="mb-3 text-sm text-destructive">{generateError}</p>}
+                  <Button
+                    disabled={generatingId !== null}
+                    loading={generatingId === activeCompany.id}
+                    onClick={() => handleGenerateBrief(activeCompany)}
+                  >
+                    Generate brief
+                  </Button>
                 </SectionCard>
-              </div>
-
-              <div className="mb-5 grid gap-5 md:grid-cols-2">
-                <ResearchList icon={MapPin} label="Locations" items={activePrep.locations} />
-                <ResearchList icon={Heart} label="Company values" items={activePrep.values} />
-                <ResearchList icon={Tag} label="Industries" items={activePrep.industries} />
-                <ResearchList icon={GraduationCap} label="Majors they hire" items={activePrep.majors} />
-                <ResearchList icon={Briefcase} label="Open positions" items={activePrep.positions} />
-              </div>
-
-              <div className="space-y-5 md:grid md:grid-cols-2 md:gap-5 md:space-y-0">
-                <SectionCard>
-                  <div className="mb-3 flex items-center justify-between gap-2">
-                    <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                      <Lightbulb size={16} weight="fill" className="text-accent-ink" aria-hidden="true" />
-                      Tailored elevator pitch
-                    </h3>
-                    <CopyButton text={activePrep.elevatorPitch} />
+              ) : (
+                <>
+                  <div className="mb-5">
+                    <SectionCard>
+                      <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
+                        <Buildings size={16} weight="fill" className="text-accent-ink" aria-hidden="true" />
+                        Company overview
+                      </h3>
+                      <p className="text-sm leading-relaxed text-card-foreground">
+                        {activePrep.overview || 'Not found.'}
+                      </p>
+                    </SectionCard>
                   </div>
-                  <p className="text-sm leading-relaxed text-card-foreground">{activePrep.elevatorPitch}</p>
-                </SectionCard>
 
-                <SectionCard>
-                  <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
-                    <ChatCircleDots size={16} weight="fill" className="text-primary" aria-hidden="true" />
-                    Strategic recruiter questions
-                  </h3>
-                  <ul className="space-y-2.5">
-                    {activePrep.questions.map((question, index) => (
-                      <li key={index} className="text-sm leading-relaxed text-card-foreground">
-                        {question}
-                      </li>
-                    ))}
-                  </ul>
-                </SectionCard>
-              </div>
+                  <div className="mb-5 grid gap-5 md:grid-cols-2">
+                    <ResearchList icon={MapPin} label="Locations" items={activePrep.locations} />
+                    <ResearchList icon={Heart} label="Company values" items={activePrep.values} />
+                    <ResearchList icon={Tag} label="Industries" items={activePrep.industries} />
+                    <ResearchList icon={GraduationCap} label="Majors they hire" items={activePrep.majors} />
+                    <ResearchList icon={Briefcase} label="Open positions" items={activePrep.positions} />
+                  </div>
+
+                  <div className="space-y-5 md:grid md:grid-cols-2 md:gap-5 md:space-y-0">
+                    <SectionCard>
+                      <div className="mb-3 flex items-center justify-between gap-2">
+                        <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                          <Lightbulb size={16} weight="fill" className="text-accent-ink" aria-hidden="true" />
+                          Why this company fits you
+                        </h3>
+                        <CopyButton text={activePrep.elevatorPitch} />
+                      </div>
+                      <p className="text-sm leading-relaxed text-card-foreground">{activePrep.elevatorPitch}</p>
+                    </SectionCard>
+
+                    <SectionCard>
+                      <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
+                        <ChatCircleDots size={16} weight="fill" className="text-primary" aria-hidden="true" />
+                        Strategic recruiter questions
+                      </h3>
+                      <ul className="space-y-2.5">
+                        {activePrep.questions.map((question, index) => (
+                          <li key={index} className="text-sm leading-relaxed text-card-foreground">
+                            {question}
+                          </li>
+                        ))}
+                      </ul>
+                    </SectionCard>
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>

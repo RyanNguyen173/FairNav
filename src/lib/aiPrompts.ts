@@ -1,4 +1,4 @@
-import type { ProfileData } from '../wizard/types'
+import type { Education, ProfileData, WorkExperience } from '../wizard/types'
 
 /**
  * The prompt text for the rank-companies and generate-pitches Gemini calls,
@@ -25,12 +25,35 @@ export interface PitchCompanyInput {
   openRoles: string[]
 }
 
+function describeExperience(experience: WorkExperience[]): string {
+  if (experience.length === 0) return 'None listed'
+  return experience
+    .map((job) => {
+      const dates = `${job.startDate || 'unknown'} - ${job.current ? 'present' : job.endDate || 'unknown'}`
+      const description = job.description ? `: ${job.description}` : ''
+      return `${job.jobTitle || 'Role'} at ${job.company || 'unknown company'} (${dates})${description}`
+    })
+    .join('; ')
+}
+
+function describeEducation(education: Education[]): string {
+  if (education.length === 0) return 'None listed'
+  return education
+    .map((edu) => {
+      const degree = [edu.degree, edu.fieldOfStudy].filter(Boolean).join(' in ') || 'Degree'
+      return `${degree} - ${edu.university || 'unknown university'} (expected ${edu.expectedGradDate || 'unknown'})`
+    })
+    .join('; ')
+}
+
 export function describeProfile(profile: ProfileData): string {
   return [
     `- Major: ${profile.major || 'Undeclared'}`,
     `- Graduation year: ${profile.gradYear || 'Unknown'}`,
     `- Skills: ${profile.skills.join(', ') || 'None listed'}`,
     `- Interests: ${profile.interests.join(', ') || 'None listed'}`,
+    `- Work experience: ${describeExperience(profile.experience)}`,
+    `- Education: ${describeEducation(profile.education)}`,
   ].join('\n')
 }
 
@@ -90,7 +113,7 @@ Companies, in order:
 ${companyList}
 
 For each company, return:
-- elevatorPitch: a short personalized 2-3 sentence pitch script tailored to that company using the student's real background.
+- elevatorPitch: 2-3 sentences on why this specific company relates to the student's interests, skills, and experience - include at least one concrete example of how a specific experience, project, or course from their background directly connects to what this company does.
 - questions: 2 thoughtful recruiter questions.
 - overview: 2-3 sentences on what the company actually does/sells/builds.
 - locations: office or headquarters locations, as many real ones as you know (city, state/country) - best estimate if unsure, empty array only if truly unknown.

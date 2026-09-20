@@ -1,3 +1,4 @@
+import { ThinkingLevel } from '@google/genai'
 import type { NextRequest } from 'next/server'
 import type { PitchCompanyInput } from '../../../src/lib/aiPrompts'
 import { buildGeneratePitchesPrompt } from '../../../src/lib/aiPrompts'
@@ -21,6 +22,8 @@ export async function POST(request: NextRequest) {
       config: {
         responseMimeType: 'application/json',
         responseSchema: GENERATE_PITCHES_SCHEMA,
+        temperature: 0.1,
+        thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
       },
     })
 
