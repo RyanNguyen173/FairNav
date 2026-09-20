@@ -145,7 +145,7 @@ export function Step4CompanyMatcher() {
 
           <div className="sticky top-24 mt-6 hidden rounded-2xl border border-border bg-card p-4 md:mt-0 md:block">
             <h2 className="mb-3 text-sm font-semibold text-foreground">
-              Target sequence ({selectedCount})
+              Target companies ({selectedCount})
             </h2>
             {selectedCompanies.length === 0 ? (
               <p className="mb-4 text-sm text-muted-foreground">
