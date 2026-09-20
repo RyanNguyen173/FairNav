@@ -1,7 +1,7 @@
 import { CircleNotch } from '@phosphor-icons/react'
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
 
-type Variant = 'primary' | 'secondary' | 'ghost' | 'destructive'
+type Variant = 'primary' | 'secondary' | 'accent' | 'ghost' | 'destructive'
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant
@@ -16,6 +16,10 @@ const VARIANT_CLASSES: Record<Variant, string> = {
   // The Vesper hairline secondary: paper/white with a translucent edge, not a filled button.
   secondary:
     'bg-card text-foreground shadow-hairline hover:bg-muted focus-visible:ring-ring disabled:opacity-50',
+  // Light-blue "invite" tone - between the neutral secondary and the filled primary,
+  // used where an action is available but not the primary path (e.g. an upcoming fair).
+  accent:
+    'bg-accent text-on-accent hover:opacity-90 focus-visible:ring-ring disabled:opacity-50',
   ghost:
     'bg-transparent text-foreground hover:bg-muted focus-visible:ring-ring disabled:opacity-50',
   destructive:

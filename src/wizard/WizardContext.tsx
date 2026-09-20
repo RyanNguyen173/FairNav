@@ -62,6 +62,7 @@ type Action =
   | { type: 'PREP_GENERATED'; prep: Record<string, CompanyPrep> }
   | { type: 'ENTER_FAIR_MODE' }
   | { type: 'EXIT_FAIR_MODE' }
+  | { type: 'SET_FAIR_MODE_COMPANY'; id: string }
   | { type: 'SET_VISITED'; id: string; visited: boolean }
   | { type: 'SET_NOTE'; id: string; note: string }
 
@@ -281,7 +282,7 @@ function reducer(state: WizardState, action: Action): WizardState {
         companies: [],
         selectedCompanyIds: [],
         prep: {},
-        fairMode: { active: false, startedAt: null, companyState: {} },
+        fairMode: { active: false, startedAt: null, companyState: {}, currentCompanyId: null },
       }))
     case 'SET_COMPANY_DIRECTORY_TEXT':
       return updateActiveFair(state, (fair) => ({ ...fair, companyDirectoryText: action.value }))
@@ -300,7 +301,7 @@ function reducer(state: WizardState, action: Action): WizardState {
         companies: action.companies,
         selectedCompanyIds: [],
         prep: {},
-        fairMode: { active: false, startedAt: null, companyState: {} },
+        fairMode: { active: false, startedAt: null, companyState: {}, currentCompanyId: null },
       }))
 
     case 'TOGGLE_COMPANY_SELECTION': {
@@ -353,6 +354,11 @@ function reducer(state: WizardState, action: Action): WizardState {
       return updateActiveFair(state, (fair) => ({
         ...fair,
         fairMode: { ...fair.fairMode, active: false },
+      }))
+    case 'SET_FAIR_MODE_COMPANY':
+      return updateActiveFair(state, (fair) => ({
+        ...fair,
+        fairMode: { ...fair.fairMode, currentCompanyId: action.id },
       }))
 
     case 'SET_VISITED':
@@ -526,6 +532,7 @@ function migrateFairProfiles(
         active: false,
         startedAt: null,
         companyState: {},
+        currentCompanyId: null,
       },
     }
     return { fairProfiles: [normalizeFairProfile(migrated)], activeFairId: migrated.id }

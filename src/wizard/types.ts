@@ -106,7 +106,7 @@ export interface FairModeCompanyState {
 
 /**
  * Not stored - derived from live data wherever it's shown (see
- * computeFairStatus in src/home/FairBoard.tsx) so it can never drift out of
+ * computeFairStatus in src/home/fairUtils.ts) so it can never drift out of
  * sync with the fair's actual progress. In progress: the default, from the
  * moment a fair is created. Completed: every selected company has been
  * marked visited.
@@ -135,6 +135,8 @@ export interface FairProfile {
     active: boolean
     startedAt: number | null
     companyState: Record<string, FairModeCompanyState>
+    /** The company Fair Mode was last showing - so leaving and re-entering (or a page reload within the same session) resumes where you left off instead of always restarting at the first company. */
+    currentCompanyId: string | null
   }
 }
 
@@ -169,6 +171,7 @@ export function createFairProfile(overrides: {
       active: false,
       startedAt: null,
       companyState: {},
+      currentCompanyId: null,
     },
   }
 }

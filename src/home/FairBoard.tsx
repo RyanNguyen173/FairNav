@@ -6,6 +6,7 @@ import { Modal } from '../components/Modal'
 import { FieldLabel, TextInput } from '../components/StepShell'
 import { targetPositionLabel, type FairProfile, type FairStatus, type TargetPosition } from '../wizard/types'
 import { useWizard } from '../wizard/WizardContext'
+import { computeFairStatus, dayDelta, formatFairDate, TAG_CLASS } from './fairUtils'
 
 const STATUS_LABEL: Record<FairStatus, string> = {
   'in-progress': 'In progress',
@@ -16,31 +17,6 @@ const STATUS_CLASS: Record<FairStatus, string> = {
   'in-progress': 'bg-surface text-muted-foreground shadow-hairline',
   completed: 'bg-success text-on-success',
 }
-
-/** In progress from the moment a fair is created; completed once every selected company has been visited. */
-function computeFairStatus(fair: FairProfile): FairStatus {
-  const visitedAll =
-    fair.selectedCompanyIds.length > 0 &&
-    fair.selectedCompanyIds.every((id) => fair.fairMode.companyState[id]?.visited)
-  return visitedAll ? 'completed' : 'in-progress'
-}
-
-function formatFairDate(iso: string): string {
-  const [y, m, d] = iso.split('-').map(Number)
-  return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-}
-
-/** Whole days between an ISO date and today, ignoring time of day. Negative means the date has passed. */
-function dayDelta(iso: string): number {
-  const [y, m, d] = iso.split('-').map(Number)
-  const target = new Date(y, m - 1, d).getTime()
-  const now = new Date()
-  const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
-  return Math.round((target - todayMidnight) / 86_400_000)
-}
-
-const TAG_CLASS =
-  'inline-flex shrink-0 items-center rounded-[4px] px-2 py-1 font-mono text-[10px] uppercase tracking-[0.06em]'
 
 function DateBadges({ date }: { date: string }) {
   const delta = dayDelta(date)
@@ -204,7 +180,7 @@ function FairCardMenu({ label, onDuplicate, onDelete }: { label: string; onDupli
   )
 }
 
-function FairCard({ fair }: { fair: FairProfile }) {
+function FairCard({ fair, leaving, onRemove }: { fair: FairProfile; leaving: boolean; onRemove: (id: string) => void }) {
   const { dispatch } = useWizard()
   const router = useRouter()
 
@@ -215,7 +191,7 @@ function FairCard({ fair }: { fair: FairProfile }) {
   const handleDuplicate = () => dispatch({ type: 'DUPLICATE_FAIR_PROFILE', id: fair.id })
   const handleDelete = () => {
     if (window.confirm(`Delete "${fair.name || 'this fair'}"? This removes its matched companies and pitch prep.`)) {
-      dispatch({ type: 'REMOVE_FAIR_PROFILE', id: fair.id })
+      onRemove(fair.id)
     }
   }
 
@@ -226,7 +202,13 @@ function FairCard({ fair }: { fair: FairProfile }) {
   }`
 
   return (
-    <div className="fn-card flex flex-col gap-3.5 rounded-2xl bg-card p-6 shadow-hairline">
+    <div
+      className={[
+        'fn-card flex flex-col gap-3.5 rounded-2xl bg-card p-6 shadow-hairline',
+        'transition-[opacity,transform] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)]',
+        leaving ? 'scale-[0.97] opacity-0' : 'scale-100 opacity-100',
+      ].join(' ')}
+    >
       <div className="flex items-start justify-between gap-3">
         <div
           className={[
@@ -283,9 +265,25 @@ function FairCard({ fair }: { fair: FairProfile }) {
  * page - never from the board.
  */
 export function FairBoard() {
-  const { state } = useWizard()
+  const { state, dispatch } = useWizard()
   const [modalOpen, setModalOpen] = useState(false)
+  const [leavingIds, setLeavingIds] = useState<Set<string>>(new Set())
   const { resume, fairProfiles } = state
+
+  // Delete plays a 200ms fade+scale-down before the card actually leaves the
+  // list, rather than vanishing instantly - the id stays in `fairProfiles`
+  // until the transition finishes so the fade has something to animate.
+  const handleRemove = (id: string) => {
+    setLeavingIds((prev) => new Set(prev).add(id))
+    setTimeout(() => {
+      dispatch({ type: 'REMOVE_FAIR_PROFILE', id })
+      setLeavingIds((prev) => {
+        const next = new Set(prev)
+        next.delete(id)
+        return next
+      })
+    }, 210)
+  }
 
   return (
     <>
@@ -298,7 +296,7 @@ export function FairBoard() {
 
       <div className="fn-grid grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {fairProfiles.map((fair) => (
-          <FairCard key={fair.id} fair={fair} />
+          <FairCard key={fair.id} fair={fair} leaving={leavingIds.has(fair.id)} onRemove={handleRemove} />
         ))}
       </div>
 
