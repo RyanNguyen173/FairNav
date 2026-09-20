@@ -168,17 +168,22 @@ export function Step5CompanyBriefs() {
 
       drag.lastClient = moveEvent.clientY
       const delta = moveEvent.clientY - drag.start
+      const rows = Array.from(container.children) as HTMLDivElement[]
 
       // Clamp to the range the chips themselves occupy - the row's natural
       // (untransformed) top plus delta can't go above the first chip or
-      // below the last one.
+      // below the last one. This is deliberately the first/last ROW's own
+      // bounds, not the list container's: on desktop the container is a
+      // grid item next to the (often much taller) details panel, and grid
+      // items stretch to fill their row's height by default, so the
+      // container's own rect reaches well past the actual last chip.
       const natural = naturalRect(draggedRow)
-      const bounds = container.getBoundingClientRect()
+      const topBound = naturalRect(rows[0]).top
+      const bottomBound = naturalRect(rows[rows.length - 1]).bottom
       const desiredTop = natural.top + delta
-      const clampedTop = Math.min(Math.max(desiredTop, bounds.top), bounds.bottom - natural.height)
+      const clampedTop = Math.min(Math.max(desiredTop, topBound), bottomBound - natural.height)
       draggedRow.style.transform = `translateY(${clampedTop - natural.top}px)`
 
-      const rows = Array.from(container.children) as HTMLDivElement[]
       const myRect = draggedRow.getBoundingClientRect()
 
       for (let i = 0; i < rows.length; i++) {
