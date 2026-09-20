@@ -9,6 +9,9 @@ import { generatePreps } from '../wizard/aiEngine'
 import type { Company } from '../wizard/types'
 import { useActiveFair, useWizard } from '../wizard/WizardContext'
 
+/** How many booth numbers to show before collapsing the rest behind "+N more". */
+const VISIBLE_BOOTH_COUNT = 2
+
 function MatchBadge({ percent }: { percent: number }) {
   const tone =
     percent >= 80 ? 'bg-primary text-on-primary' : percent >= 60 ? 'bg-secondary text-on-secondary' : 'bg-muted text-muted-foreground'
@@ -17,14 +20,51 @@ function MatchBadge({ percent }: { percent: number }) {
   )
 }
 
+function BoothNumbers({ boothNumbers }: { boothNumbers: string[] }) {
+  const [expanded, setExpanded] = useState(false)
+  if (boothNumbers.length === 0) {
+    return (
+      <p className="mb-2 flex items-center gap-1 text-xs text-muted-foreground">
+        <MapPin size={13} weight="fill" aria-hidden="true" />
+        No booth listed
+      </p>
+    )
+  }
+
+  const hiddenCount = boothNumbers.length - VISIBLE_BOOTH_COUNT
+  const shown = expanded ? boothNumbers : boothNumbers.slice(0, VISIBLE_BOOTH_COUNT)
+
+  return (
+    <p className="mb-2 flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
+      <MapPin size={13} weight="fill" className="shrink-0" aria-hidden="true" />
+      Booth {shown.join(', ')}
+      {!expanded && hiddenCount > 0 && (
+        <button
+          type="button"
+          onClick={(event) => {
+            event.preventDefault()
+            event.stopPropagation()
+            setExpanded(true)
+          }}
+          className="cursor-pointer font-semibold text-accent-ink underline underline-offset-2"
+        >
+          +{hiddenCount} more
+        </button>
+      )}
+    </p>
+  )
+}
+
 function CompanyCard({
   company,
   selected,
   onToggle,
+  interestMatch,
 }: {
   company: Company
   selected: boolean
   onToggle: () => void
+  interestMatch: boolean
 }) {
   return (
     <label
@@ -45,12 +85,20 @@ function CompanyCard({
           <h3 className="truncate text-[15px] font-bold text-card-foreground">{company.companyName}</h3>
           <MatchBadge percent={company.matchScore} />
         </div>
-        <p className="mb-2 flex items-center gap-1 text-xs text-muted-foreground">
-          <MapPin size={13} weight="fill" aria-hidden="true" />
-          Booth {company.boothNumber}
-        </p>
+        <BoothNumbers boothNumbers={company.boothNumbers} />
         <p className="mb-2.5 text-sm text-muted-foreground">{company.summary}</p>
         <div className="mb-2.5 flex flex-wrap gap-1.5">
+          {company.industry && (
+            <span
+              className={[
+                'rounded-full px-2.5 py-1 text-xs font-semibold',
+                interestMatch ? 'bg-accent-wash text-accent-ink' : 'border border-border bg-background text-muted-foreground',
+              ].join(' ')}
+              title={interestMatch ? 'Matches one of your profile interests' : undefined}
+            >
+              {company.industry}
+            </span>
+          )}
           {company.openRoles.map((role) => (
             <span
               key={role}
@@ -73,6 +121,7 @@ export function Step4CompanyMatcher() {
   const { companies, selectedCompanyIds } = fair
   const selectedCount = selectedCompanyIds.length
   const [isGenerating, setIsGenerating] = useState(false)
+  const profileInterests = new Set(profile.interests.map((interest) => interest.toLowerCase()))
 
   const handleGenerate = async () => {
     setIsGenerating(true)
@@ -124,6 +173,7 @@ export function Step4CompanyMatcher() {
                 company={company}
                 selected={selectedCompanyIds.includes(company.id)}
                 onToggle={() => dispatch({ type: 'TOGGLE_COMPANY_SELECTION', id: company.id })}
+                interestMatch={profileInterests.has(company.industry.toLowerCase())}
               />
             ))}
           </div>
@@ -142,7 +192,9 @@ export function Step4CompanyMatcher() {
                   <li key={company.id} className="flex items-center gap-2 text-sm text-card-foreground">
                     <CheckCircle size={15} weight="fill" className="shrink-0 text-primary" aria-hidden="true" />
                     <span className="truncate">{company.companyName}</span>
-                    <span className="ml-auto shrink-0 text-xs text-muted-foreground">Booth {company.boothNumber}</span>
+                    <span className="ml-auto shrink-0 text-xs text-muted-foreground">
+                      Booth {company.boothNumbers.join(', ') || '—'}
+                    </span>
                   </li>
                 ))}
               </ul>

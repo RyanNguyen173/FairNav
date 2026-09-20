@@ -59,8 +59,12 @@ export interface Booth {
 export interface Company {
   id: string
   companyName: string
-  boothNumber: string
+  /** Every booth this company holds at the fair - a directory can list the same company more than once. */
+  boothNumbers: string[]
+  /** What the company actually does - a short overview, not a match-fit blurb. */
   summary: string
+  /** Primary industry, compared against the student's profile interests to highlight a match in the UI. */
+  industry: string
   openRoles: string[]
   /** 0-100 coordinates on the booth map */
   x: number
@@ -69,9 +73,21 @@ export interface Company {
   matchScore: number
 }
 
+/**
+ * Deeper per-company research generated alongside the pitch, once a company
+ * is selected - shown on the Briefs page. Accuracy is a known follow-up
+ * (nothing here is verified against a live source yet): every list can
+ * legitimately come back empty, which the UI treats as "not found".
+ */
 export interface CompanyPrep {
   elevatorPitch: string
   questions: string[]
+  overview: string
+  locations: string[]
+  values: string[]
+  industries: string[]
+  majors: string[]
+  positions: string[]
 }
 
 export interface FairModeCompanyState {

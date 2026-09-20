@@ -132,7 +132,7 @@ export function Step3FairIngestion() {
                     <li key={company.id} className="flex items-center justify-between gap-2 text-sm">
                       <span className="truncate text-card-foreground">{company.companyName}</span>
                       <span className="shrink-0 text-xs text-muted-foreground">
-                        {company.boothNumber ? `Booth ${company.boothNumber}` : 'No booth listed'}
+                        {company.boothNumbers.length > 0 ? `Booth ${company.boothNumbers.join(', ')}` : 'No booth listed'}
                       </span>
                     </li>
                   ))}

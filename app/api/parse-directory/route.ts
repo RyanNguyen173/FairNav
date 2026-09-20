@@ -14,12 +14,12 @@ export async function POST(request: NextRequest) {
     const { rawText, file } = payload as ParseDirectoryPayload
 
     const instruction = file
-      ? 'Extract every exhibitor/company and its booth number(s) from the attached directory document, exactly as printed (if a company lists multiple booth numbers, use the first one).'
+      ? 'Extract every exhibitor/company and every booth number listed for it from the attached directory document, exactly as printed.'
       : rawText.trim()
-        ? `Extract every company and, if given, its booth number from this list:\n${rawText}`
+        ? `Extract every company and every booth number listed for it from this list:\n${rawText}`
         : 'No directory was provided. Invent a realistic set of 8-10 companies (with plausible booth numbers) that would attend a general career fair.'
 
-    const prompt = `${instruction}\n\nReturn each company's name and booth number (empty string if no booth number is given or known).`
+    const prompt = `${instruction}\n\nIf a company has more than one booth (e.g. "12, 14" in one cell, or the same company on two separate rows), return one entry per booth number rather than combining or dropping any. Return each entry's company name and booth number (empty string if no booth number is given or known).`
 
     const response = await generateWithRetry(ai, {
       model: MODEL,

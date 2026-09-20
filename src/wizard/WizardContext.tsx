@@ -365,6 +365,58 @@ function sanitizeEducation(value: unknown): Education[] {
 }
 
 /**
+ * Backfills a company saved before boothNumber (singular) became
+ * boothNumbers (plural) / before industry existed, so an old encrypted
+ * fair doesn't crash the UI calling .boothNumbers.join(...) on undefined.
+ */
+function normalizeCompany(raw: Record<string, unknown>): Company {
+  const boothNumbers = Array.isArray(raw.boothNumbers)
+    ? (raw.boothNumbers as string[])
+    : typeof raw.boothNumber === 'string' && raw.boothNumber
+      ? [raw.boothNumber]
+      : []
+  return {
+    id: raw.id as string,
+    companyName: (raw.companyName as string) ?? '',
+    boothNumbers,
+    summary: (raw.summary as string) ?? '',
+    industry: (raw.industry as string) ?? '',
+    openRoles: Array.isArray(raw.openRoles) ? (raw.openRoles as string[]) : [],
+    x: typeof raw.x === 'number' ? raw.x : 0,
+    y: typeof raw.y === 'number' ? raw.y : 0,
+    matchScore: typeof raw.matchScore === 'number' ? raw.matchScore : 0,
+  }
+}
+
+/** Backfills the company-research fields added alongside the existing pitch/questions. */
+function normalizePrep(raw: Record<string, unknown>): CompanyPrep {
+  return {
+    elevatorPitch: (raw.elevatorPitch as string) ?? '',
+    questions: Array.isArray(raw.questions) ? (raw.questions as string[]) : [],
+    overview: (raw.overview as string) ?? '',
+    locations: Array.isArray(raw.locations) ? (raw.locations as string[]) : [],
+    values: Array.isArray(raw.values) ? (raw.values as string[]) : [],
+    industries: Array.isArray(raw.industries) ? (raw.industries as string[]) : [],
+    majors: Array.isArray(raw.majors) ? (raw.majors as string[]) : [],
+    positions: Array.isArray(raw.positions) ? (raw.positions as string[]) : [],
+  }
+}
+
+function normalizeFairProfile(fair: FairProfile): FairProfile {
+  const prep: Record<string, CompanyPrep> = {}
+  for (const [id, value] of Object.entries(fair.prep ?? {})) {
+    prep[id] = normalizePrep(value as unknown as Record<string, unknown>)
+  }
+  return {
+    ...fair,
+    companies: Array.isArray(fair.companies)
+      ? fair.companies.map((company) => normalizeCompany(company as unknown as Record<string, unknown>))
+      : [],
+    prep,
+  }
+}
+
+/**
  * Migrates a saved WizardState from before multi-fair support - it used to
  * hold a single top-level fair/companies/selectedCompanyIds/prep/fairMode
  * instead of a fairProfiles array - into the new shape, preserving whatever
@@ -385,7 +437,7 @@ function migrateFairProfiles(
         fairProfiles.some((fair) => fair.id === initialState.activeFairId)
           ? initialState.activeFairId
           : fairProfiles[0].id
-      return { fairProfiles, activeFairId }
+      return { fairProfiles: fairProfiles.map(normalizeFairProfile), activeFairId }
     }
   }
 
@@ -423,7 +475,7 @@ function migrateFairProfiles(
         companyState: {},
       },
     }
-    return { fairProfiles: [migrated], activeFairId: migrated.id }
+    return { fairProfiles: [normalizeFairProfile(migrated)], activeFairId: migrated.id }
   }
 
   return { fairProfiles: initialWizardState.fairProfiles, activeFairId: initialWizardState.activeFairId }

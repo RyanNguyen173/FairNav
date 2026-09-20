@@ -151,7 +151,8 @@ function FairCard({ fair }: { fair: FairProfile }) {
   }
 
   const status = computeFairStatus(fair)
-  const boothLabel = `${fair.companies.length} target ${fair.companies.length === 1 ? 'booth' : 'booths'}${
+  const boothCount = fair.companies.reduce((sum, company) => sum + company.boothNumbers.length, 0)
+  const boothLabel = `${boothCount} target ${boothCount === 1 ? 'booth' : 'booths'}${
     status === 'completed' ? ' · all visited' : ''
   }`
 

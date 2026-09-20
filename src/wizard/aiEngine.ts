@@ -69,6 +69,30 @@ export async function parseResume(file: File): Promise<ParsedResume> {
 
 type RankedCompany = Omit<Company, 'id' | 'x' | 'y'>
 
+/**
+ * A directory can list the same company more than once (multiple booths,
+ * or the same booth split across rows) - merge those into one entry with
+ * every booth number before ranking, so Matches/Briefs show one card per
+ * company rather than a duplicate per booth.
+ */
+function mergeBoothsByCompany(booths: Booth[]): { companyName: string; boothNumbers: string[] }[] {
+  const merged = new Map<string, { companyName: string; boothNumbers: string[] }>()
+  for (const booth of booths) {
+    const name = booth.companyName.trim()
+    if (!name) continue
+    const key = name.toLowerCase()
+    const existing = merged.get(key)
+    if (existing) {
+      if (booth.boothNumber && !existing.boothNumbers.includes(booth.boothNumber)) {
+        existing.boothNumbers.push(booth.boothNumber)
+      }
+    } else {
+      merged.set(key, { companyName: name, boothNumbers: booth.boothNumber ? [booth.boothNumber] : [] })
+    }
+  }
+  return [...merged.values()]
+}
+
 export async function analyzeFair(
   rawText: string,
   companyListFile: File | null,
@@ -82,7 +106,7 @@ export async function analyzeFair(
     const { booths } = await callApi<{ booths: Booth[] }>('/api/parse-directory', { rawText, file })
     const { rankedCompanies } = await callApi<{ rankedCompanies: RankedCompany[] }>('/api/rank-companies', {
       profile,
-      booths,
+      companies: mergeBoothsByCompany(booths),
     })
 
     return rankedCompanies.map((company, index) => {
@@ -100,11 +124,7 @@ export async function analyzeFair(
   }
 }
 
-interface PitchResult {
-  companyName: string
-  elevatorPitch: string
-  questions: string[]
-}
+type PitchResult = CompanyPrep & { companyName: string }
 
 /**
  * One request covering every selected company, rather than one request per
@@ -118,18 +138,19 @@ export async function generatePreps(
   try {
     const { pitches } = await callApi<{ pitches: PitchResult[] }>('/api/generate-pitches', {
       profile,
-      companies: companies.map(({ companyName, boothNumber, summary, openRoles }) => ({
+      companies: companies.map(({ companyName, boothNumbers, summary, industry, openRoles }) => ({
         companyName,
-        boothNumber,
+        boothNumbers,
         summary,
+        industry,
         openRoles,
       })),
     })
 
     const prep: Record<string, CompanyPrep> = {}
     companies.forEach((company, index) => {
-      const result = pitches[index]
-      prep[company.id] = { elevatorPitch: result.elevatorPitch, questions: result.questions }
+      const { companyName: _companyName, ...result } = pitches[index]
+      prep[company.id] = result
     })
     return prep
   } catch (error) {

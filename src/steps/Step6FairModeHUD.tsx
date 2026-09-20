@@ -56,7 +56,7 @@ function QueueCard({
         <span className="min-w-0 flex-1">
           <span className="block truncate text-[15px] font-bold text-card-foreground">{company.companyName}</span>
           <span className="block text-xs text-muted-foreground">
-            Booth {company.boothNumber} · {company.matchScore}% match
+            Booth {company.boothNumbers.join(', ')} · {company.matchScore}% match
           </span>
         </span>
       </button>
@@ -84,7 +84,7 @@ function QueueCard({
 function PitchDetails({ company, pitch }: { company: Company; pitch: { elevatorPitch: string; questions: string[] } }) {
   return (
     <div className="space-y-4">
-      <p className="text-xs text-muted-foreground">Booth {company.boothNumber}</p>
+      <p className="text-xs text-muted-foreground">Booth {company.boothNumbers.join(', ')}</p>
       <div>
         <h3 className="mb-2 text-sm font-semibold text-foreground">Elevator pitch</h3>
         <p className="text-sm leading-relaxed text-card-foreground">{pitch.elevatorPitch}</p>

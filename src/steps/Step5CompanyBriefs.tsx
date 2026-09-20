@@ -1,4 +1,15 @@
-import { ChatCircleDots, Check, Copy, Lightbulb } from '@phosphor-icons/react'
+import {
+  Briefcase,
+  Buildings,
+  ChatCircleDots,
+  Check,
+  Copy,
+  GraduationCap,
+  Heart,
+  Lightbulb,
+  MapPin,
+  Tag,
+} from '@phosphor-icons/react'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { Button } from '../components/Button'
@@ -6,6 +17,40 @@ import { FairSubNav } from '../components/FairSubNav'
 import { Header } from '../components/Header'
 import { SectionCard, StepShell } from '../components/StepShell'
 import { useActiveFair, useWizard } from '../wizard/WizardContext'
+
+/** A research field shown as a chip list, with a "not found" fallback for a legitimately empty result. */
+function ResearchList({
+  icon: Icon,
+  label,
+  items,
+}: {
+  icon: typeof MapPin
+  label: string
+  items: string[]
+}) {
+  return (
+    <SectionCard>
+      <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
+        <Icon size={16} weight="fill" className="text-accent-ink" aria-hidden="true" />
+        {label}
+      </h3>
+      {items.length > 0 ? (
+        <div className="flex flex-wrap gap-1.5">
+          {items.map((item) => (
+            <span
+              key={item}
+              className="rounded-full border border-border bg-background px-2.5 py-1 text-xs font-medium text-foreground"
+            >
+              {item}
+            </span>
+          ))}
+        </div>
+      ) : (
+        <p className="text-sm text-muted-foreground">Not found.</p>
+      )}
+    </SectionCard>
+  )
+}
 
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false)
@@ -97,8 +142,30 @@ export function Step5CompanyBriefs() {
           {activeCompany && activePrep && (
             <div role="tabpanel">
               <div className="mb-5">
-                <p className="text-xs font-medium text-muted-foreground">Booth {activeCompany.boothNumber}</p>
+                <p className="text-xs font-medium text-muted-foreground">
+                  Booth {activeCompany.boothNumbers.join(', ') || '—'}
+                </p>
                 <h2 className="text-lg font-bold text-foreground">{activeCompany.companyName}</h2>
+              </div>
+
+              <div className="mb-5">
+                <SectionCard>
+                  <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
+                    <Buildings size={16} weight="fill" className="text-accent-ink" aria-hidden="true" />
+                    Company overview
+                  </h3>
+                  <p className="text-sm leading-relaxed text-card-foreground">
+                    {activePrep.overview || 'Not found.'}
+                  </p>
+                </SectionCard>
+              </div>
+
+              <div className="mb-5 grid gap-5 md:grid-cols-2">
+                <ResearchList icon={MapPin} label="Locations" items={activePrep.locations} />
+                <ResearchList icon={Heart} label="Company values" items={activePrep.values} />
+                <ResearchList icon={Tag} label="Industries" items={activePrep.industries} />
+                <ResearchList icon={GraduationCap} label="Majors they hire" items={activePrep.majors} />
+                <ResearchList icon={Briefcase} label="Open positions" items={activePrep.positions} />
               </div>
 
               <div className="space-y-5 md:grid md:grid-cols-2 md:gap-5 md:space-y-0">

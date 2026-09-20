@@ -5,22 +5,26 @@ import type { ProfileData } from '../../../src/wizard/types'
 
 export const maxDuration = 60
 
-interface Booth {
-  boothNumber: string
+interface MergedCompany {
   companyName: string
+  /** Every booth this company holds - already deduplicated/merged client-side before this call. */
+  boothNumbers: string[]
 }
 
 interface RankCompaniesPayload {
   profile: ProfileData
-  booths: Booth[]
+  companies: MergedCompany[]
 }
 
 export async function POST(request: NextRequest) {
   return withGeminiHandler(request, async (ai, payload) => {
-    const { profile, booths } = payload as RankCompaniesPayload
+    const { profile, companies } = payload as RankCompaniesPayload
 
-    const boothList = booths
-      .map((booth, index) => `${index + 1}. ${booth.companyName} (booth ${booth.boothNumber || 'unknown'})`)
+    const companyList = companies
+      .map((company, index) => {
+        const booths = company.boothNumbers.length > 0 ? company.boothNumbers.join(', ') : 'unknown'
+        return `${index + 1}. ${company.companyName} (booth${company.boothNumbers.length === 1 ? '' : 's'} ${booths})`
+      })
       .join('\n')
 
     const prompt = `Rank these career fair companies for a student, from best to worst fit.
@@ -29,9 +33,14 @@ Student profile:
 ${describeProfile(profile)}
 
 Companies attending, with booth numbers:
-${boothList}
+${companyList}
 
-For each company, keep its companyName and boothNumber exactly as given, and add a one-sentence summary of what it does, 1-2 plausible open roles, and a matchScore (0-100) reflecting fit with this student. Order the array from highest matchScore to lowest.`
+For each company, keep its companyName and boothNumbers array exactly as given, and add:
+- summary: 1-2 sentences that are a genuine company overview - what the company actually does/sells/builds. Not a sentence about why it fits this student.
+- industry: the single primary industry this company operates in (e.g. "Fintech", "Aerospace", "Healthcare", "Software Engineering").
+- openRoles: 1-2 plausible open roles.
+- matchScore: 0-100 reflecting fit with this student.
+Order the array from highest matchScore to lowest.`
 
     const response = await generateWithRetry(ai, {
       model: MODEL,
@@ -47,12 +56,13 @@ For each company, keep its companyName and boothNumber exactly as given, and add
                 type: Type.OBJECT,
                 properties: {
                   companyName: { type: Type.STRING },
-                  boothNumber: { type: Type.STRING },
+                  boothNumbers: { type: Type.ARRAY, items: { type: Type.STRING } },
                   matchScore: { type: Type.INTEGER },
                   summary: { type: Type.STRING },
+                  industry: { type: Type.STRING },
                   openRoles: { type: Type.ARRAY, items: { type: Type.STRING } },
                 },
-                required: ['companyName', 'boothNumber', 'matchScore', 'summary', 'openRoles'],
+                required: ['companyName', 'boothNumbers', 'matchScore', 'summary', 'industry', 'openRoles'],
               },
             },
           },

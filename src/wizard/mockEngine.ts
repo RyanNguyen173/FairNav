@@ -473,6 +473,30 @@ export function buildCompanyDirectory(rawText: string, fileName: string | null):
   })
 }
 
+/**
+ * Merges same-named templates into one entry with multiple booth numbers -
+ * mirrors the real directory-parsing merge in aiEngine.ts, and also gives
+ * every third demo company an extra booth so the "show 2, +more" UI has
+ * something to demonstrate even with no real directory pasted in.
+ */
+function assignBoothNumbers(templates: CompanyTemplate[]): { template: CompanyTemplate; boothNumbers: string[] }[] {
+  const merged = new Map<string, { template: CompanyTemplate; boothNumbers: string[] }>()
+  let boothCounter = 1
+  templates.forEach((template, index) => {
+    const key = template.name.trim().toLowerCase()
+    const boothNumber = String(boothCounter++).padStart(2, '0')
+    const existing = merged.get(key)
+    if (existing) {
+      existing.boothNumbers.push(boothNumber)
+    } else {
+      const boothNumbers = [boothNumber]
+      if (index % 3 === 0) boothNumbers.push(String(boothCounter++).padStart(2, '0'))
+      merged.set(key, { template, boothNumbers })
+    }
+  })
+  return [...merged.values()]
+}
+
 /** Simulates the "parse directory + rank companies" steps combined. */
 export async function mockAnalyzeFair(
   rawText: string,
@@ -481,14 +505,16 @@ export async function mockAnalyzeFair(
 ): Promise<Company[]> {
   await fakeDelay(1800)
   const templates = buildCompanyDirectory(rawText, fileName)
+  const entries = assignBoothNumbers(templates)
 
-  return templates.map((template, index) => {
-    const { x, y } = boothCoordinatesForIndex(index, templates.length)
+  return entries.map(({ template, boothNumbers }, index) => {
+    const { x, y } = boothCoordinatesForIndex(index, entries.length)
     return {
       id: `company-${index}-${template.name.replace(/\s+/g, '-').toLowerCase()}`,
       companyName: template.name,
-      boothNumber: String(index + 1).padStart(2, '0'),
+      boothNumbers,
       summary: template.overview,
+      industry: template.industry,
       openRoles: template.openRoles,
       x,
       y,
@@ -514,7 +540,18 @@ function computeMatchScore(profile: ProfileData, template: CompanyTemplate): num
   return Math.min(98, base + jitter)
 }
 
-/** Simulates generating a personalized elevator pitch + follow-up questions. */
+const VALUE_POOL = [
+  'Innovation',
+  'Integrity',
+  'Collaboration',
+  'Customer focus',
+  'Diversity & inclusion',
+  'Ownership',
+  'Sustainability',
+  'Continuous learning',
+]
+
+/** Simulates generating a personalized elevator pitch + follow-up questions + company research. */
 export function mockGeneratePrep(profile: ProfileData, company: Company): CompanyPrep {
   const anchorSkill = profile.skills[0] ?? 'hands-on project work'
   const secondSkill = profile.skills[1] ?? 'cross-functional teamwork'
@@ -527,5 +564,14 @@ export function mockGeneratePrep(profile: ProfileData, company: Company): Compan
     `How does ${company.companyName} support people moving deeper into ${interestAnchor.toLowerCase()}?`,
   ]
 
-  return { elevatorPitch, questions }
+  return {
+    elevatorPitch,
+    questions,
+    overview: company.summary,
+    locations: pickRandom(JOB_LOCATION_POOL, 1 + Math.floor(Math.random() * 3)),
+    values: pickRandom(VALUE_POOL, 3),
+    industries: [company.industry],
+    majors: pickRandom(MAJOR_POOL, 3),
+    positions: company.openRoles.length > 0 ? company.openRoles : [`${company.industry} Intern`],
+  }
 }
