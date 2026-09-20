@@ -50,6 +50,11 @@ export function HomePage() {
   useLayoutEffect(() => {
     syncIndicator()
     window.addEventListener('resize', syncIndicator)
+    // Public Sans loads over the network (see globals.css); if it swaps in
+    // after this first measurement, the tab text reflows and the indicator
+    // (measured against the fallback font) ends up misaligned - re-sync once
+    // the real font is ready.
+    document.fonts?.ready?.then(syncIndicator)
     return () => window.removeEventListener('resize', syncIndicator)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab])
@@ -95,7 +100,7 @@ export function HomePage() {
           ))}
           <span
             aria-hidden="true"
-            className="absolute bottom-0 h-0.5 bg-primary transition-[transform,width] duration-200 ease-[cubic-bezier(0.77,0,0.175,1)]"
+            className="absolute bottom-0 left-0 h-0.5 bg-primary transition-[transform,width] duration-200 ease-[cubic-bezier(0.77,0,0.175,1)]"
             style={{ transform: `translateX(${indicator.x}px)`, width: `${indicator.width}px` }}
           />
         </div>
