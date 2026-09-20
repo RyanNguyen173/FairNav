@@ -197,9 +197,16 @@ export function Step6FairModeHUD() {
     // false the instant we exit - flag which tab to land on so Home doesn't
     // fall back to the fair board instead of the Fair Day home menu.
     sessionStorage.setItem('fairnav-home-tab', 'day')
+    sessionStorage.removeItem('fairnav-suppress-auto-fairday')
     router.push('/')
   }
-  const backToDashboard = () => router.push('/briefs')
+  const backToDashboard = () => {
+    // See HomePage's tab initializer: without this, backing all the way out
+    // through Details/Matches/Briefs' own arrows would land on Home while
+    // fair mode is still active and bounce straight back into Fair Day.
+    sessionStorage.setItem('fairnav-suppress-auto-fairday', '1')
+    router.push('/briefs')
+  }
 
   const queue = selectedCompanyIds
     .map((id) => companies.find((c) => c.id === id))

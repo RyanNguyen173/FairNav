@@ -59,6 +59,7 @@ export function FairDay() {
                   onClick={() => {
                     dispatch({ type: 'SET_ACTIVE_FAIR', id: fair.id })
                     dispatch({ type: 'ENTER_FAIR_MODE' })
+                    sessionStorage.removeItem('fairnav-suppress-auto-fairday')
                     router.push('/fair-day')
                   }}
                 >

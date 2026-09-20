@@ -59,6 +59,9 @@ export function Step5CompanyBriefs() {
   const { companies, selectedCompanyIds, prep } = fair
   const enterFairMode = () => {
     dispatch({ type: 'ENTER_FAIR_MODE' })
+    // A fresh entry into Fair Day restores Home's normal auto-jump-when-live
+    // behavior, in case an earlier "Back to dashboard" had suppressed it.
+    sessionStorage.removeItem('fairnav-suppress-auto-fairday')
     router.push('/fair-day')
   }
   const selectedCompanies = selectedCompanyIds
