@@ -126,6 +126,30 @@ after signing in, which added a confusing extra screen for little benefit.
    secrecy.
 4. For deployment, set the same two variables in Vercel's project settings.
 
+### Auth emails (Mailtrap)
+
+Supabase's own email sender is fine for local testing but rate-limited and
+not meant for production, so signup confirmation emails are sent through
+Mailtrap's SMTP relay instead. This is entirely Supabase-dashboard
+configuration — nothing in the app code talks to Mailtrap or knows it
+exists; `supabase.auth.signUp()` in `src/auth/AuthContext.tsx` is unchanged
+and still triggers Supabase's own confirmation email, just delivered
+through a different relay.
+
+1. In Supabase Dashboard → Authentication → Emails → SMTP Settings, enable
+   custom SMTP and enter your Mailtrap sending domain's credentials (host,
+   port, username, password from Mailtrap's dashboard).
+2. In Authentication → Emails → Templates → Confirm signup, paste in
+   `supabase/email-templates/confirm-signup.html` — a Vesper-branded
+   version of the confirmation email (FairNav logo, matching colors/type)
+   in place of Supabase's plain default. It uses Supabase's own
+   `{{ .ConfirmationURL }}` template variable, so no other change is
+   needed.
+3. Confirm `https://fairnav.vercel.app/account-created` (see "Authentication
+   & encryption" below) is still in Authentication → URL Configuration →
+   Redirect URLs — that's independent of the SMTP relay and doesn't change
+   with this switch.
+
 ## Using the real AI backend
 
 1. Get a key from [Google AI Studio](https://aistudio.google.com/apikey).
