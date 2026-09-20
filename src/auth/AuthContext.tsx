@@ -133,6 +133,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setError(signUpError.message)
         return { needsEmailConfirmation: false }
       }
+      // Supabase deliberately returns a 200 with no error for an email
+      // that's already registered and confirmed (so a malicious caller
+      // can't enumerate accounts by watching for a distinct error) - the
+      // documented way to detect it client-side is an empty `identities`
+      // array on the returned (fake) user, alongside no session.
+      if (data.user && data.user.identities?.length === 0) {
+        setError('An account with this email already exists. Try signing in instead.')
+        return { needsEmailConfirmation: false }
+      }
       if (data.session && data.user) {
         const { key } = await unlockOrInitProfile(data.user.id, password)
         setEncryptionKey(key)
