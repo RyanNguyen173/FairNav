@@ -21,6 +21,15 @@ import { ResearchList } from '../components/ResearchList'
 import { SectionCard, StepShell } from '../components/StepShell'
 import { useActiveFair, useWizard } from '../wizard/WizardContext'
 
+/** An element's true resting position, ignoring any in-flight animation transform (e.g. a FLIP still mid-flight). */
+function naturalRect(el: HTMLElement): DOMRect {
+  const saved = el.style.transform
+  el.style.transform = ''
+  const rect = el.getBoundingClientRect()
+  el.style.transform = saved
+  return rect
+}
+
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false)
 
@@ -73,16 +82,19 @@ export function Step5CompanyBriefs() {
   // Drag-to-reorder for the queue below: a dedicated handle (not the whole
   // chip, which already selects the active company on click) drives it via
   // Pointer Events, so it works the same on touch and mouse without any new
-  // dependency. The container is a horizontal scroller on mobile and a
-  // vertical list on desktop (md:flex-col) - `axis` is read from the
-  // container's actual computed flex-direction at drag start so the same
-  // logic drives both.
+  // dependency. The queue is a vertical list at every width (see the
+  // container's className below), so this only ever needs to track the
+  // vertical axis.
   const listRef = useRef<HTMLDivElement>(null)
   const rowRefs = useRef(new Map<string, HTMLDivElement>())
-  const dragRef = useRef<{ id: string; axis: 'x' | 'y'; start: number; lastClient: number; pointerId: number } | null>(
-    null,
-  )
+  const dragRef = useRef<{ id: string; start: number; lastClient: number; pointerId: number } | null>(null)
   const flipSnapshotRef = useRef<Map<string, DOMRect> | null>(null)
+
+  // How much the dragged row has to overlap a neighbor - as a fraction of
+  // that neighbor's own height - before they swap places. Higher than a
+  // bare majority so a swap only fires once the dragged row is clearly
+  // sitting on top of the other chip, not the instant their midpoints cross.
+  const SWAP_OVERLAP_THRESHOLD = 0.7
 
   useLayoutEffect(() => {
     const snapshot = flipSnapshotRef.current
@@ -95,7 +107,7 @@ export function Step5CompanyBriefs() {
       if (!el) return
 
       // The dragged row itself reordering moves its own untransformed slot,
-      // so its existing translate*(delta) - measured against the OLD slot -
+      // so its existing translateY(delta) - measured against the OLD slot -
       // would make it jump instead of keep tracking the pointer. Recompute
       // the transform against the row's new slot (rather than resetting it
       // to identity like the other, merely-displaced rows below), and
@@ -105,8 +117,8 @@ export function Step5CompanyBriefs() {
         el.style.transition = 'none'
         el.style.transform = ''
         const natural = el.getBoundingClientRect()
-        const corrected = drag.axis === 'y' ? before.top - natural.top : before.left - natural.left
-        el.style.transform = drag.axis === 'y' ? `translateY(${corrected}px)` : `translateX(${corrected}px)`
+        const corrected = before.top - natural.top
+        el.style.transform = `translateY(${corrected}px)`
         drag.start = drag.lastClient - corrected
         requestAnimationFrame(() => {
           el.style.transition = ''
@@ -115,11 +127,10 @@ export function Step5CompanyBriefs() {
       }
 
       const after = el.getBoundingClientRect()
-      const dx = before.left - after.left
       const dy = before.top - after.top
-      if (dx === 0 && dy === 0) return
+      if (dy === 0) return
       el.style.transition = 'none'
-      el.style.transform = `translate(${dx}px, ${dy}px)`
+      el.style.transform = `translateY(${dy}px)`
       requestAnimationFrame(() => {
         el.style.transition = ''
         el.style.transform = ''
@@ -143,10 +154,8 @@ export function Step5CompanyBriefs() {
     if (event.button !== 0 || dragRef.current) return
     const container = listRef.current
     if (!container) return
-    const axis = getComputedStyle(container).flexDirection === 'column' ? 'y' : 'x'
     const pointerId = event.pointerId
-    const startClient = axis === 'y' ? event.clientY : event.clientX
-    dragRef.current = { id, axis, start: startClient, lastClient: startClient, pointerId }
+    dragRef.current = { id, start: event.clientY, lastClient: event.clientY, pointerId }
     const row = rowRefs.current.get(id)
     if (row) row.style.zIndex = '10'
     event.preventDefault()
@@ -157,28 +166,34 @@ export function Step5CompanyBriefs() {
       const draggedRow = rowRefs.current.get(drag.id)
       if (!draggedRow || !container) return
 
-      const client = drag.axis === 'y' ? moveEvent.clientY : moveEvent.clientX
-      drag.lastClient = client
-      const delta = client - drag.start
-      draggedRow.style.transform = drag.axis === 'y' ? `translateY(${delta}px)` : `translateX(${delta}px)`
+      drag.lastClient = moveEvent.clientY
+      const delta = moveEvent.clientY - drag.start
+      draggedRow.style.transform = `translateY(${delta}px)`
 
       const rows = Array.from(container.children) as HTMLDivElement[]
-      const myIndex = rows.findIndex((el) => el.dataset.companyId === drag.id)
       const myRect = draggedRow.getBoundingClientRect()
-      const myMid = drag.axis === 'y' ? myRect.top + myRect.height / 2 : myRect.left + myRect.width / 2
 
       for (let i = 0; i < rows.length; i++) {
         const other = rows[i]
         if (other.dataset.companyId === drag.id) continue
-        const rect = other.getBoundingClientRect()
-        const mid = drag.axis === 'y' ? rect.top + rect.height / 2 : rect.left + rect.width / 2
-        const crossed = (i < myIndex && myMid < mid) || (i > myIndex && myMid > mid)
-        if (!crossed) continue
+        // A row mid-FLIP still carries its transient "make it look like the
+        // old slot" transform until its own requestAnimationFrame clears it
+        // - a pointermove landing before that frame would otherwise read its
+        // stale visual offset as if it were the row's real slot, causing the
+        // dragged row to swap back and forth on every step. Measure the
+        // row's true resting position with any in-flight transform stripped.
+        const rect = naturalRect(other)
+
+        const overlapTop = Math.max(myRect.top, rect.top)
+        const overlapBottom = Math.min(myRect.bottom, rect.bottom)
+        const overlapRatio = rect.height > 0 ? Math.max(0, overlapBottom - overlapTop) / rect.height : 0
+        if (overlapRatio < SWAP_OVERLAP_THRESHOLD) continue
 
         const before = new Map<string, DOMRect>()
         rows.forEach((el) => {
           const cid = el.dataset.companyId
-          if (cid) before.set(cid, el.getBoundingClientRect())
+          if (!cid) return
+          before.set(cid, cid === drag.id ? el.getBoundingClientRect() : naturalRect(el))
         })
         flipSnapshotRef.current = before
         dispatch({ type: 'REORDER_SELECTED_COMPANY', id: drag.id, toIndex: i })
@@ -220,12 +235,7 @@ export function Step5CompanyBriefs() {
         </p>
 
         <div className="md:grid md:grid-cols-[220px_1fr] md:gap-6">
-          <div
-            ref={listRef}
-            className="mb-5 -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 md:mb-0 md:mx-0 md:flex-col md:overflow-visible md:px-0 md:pb-0"
-            role="tablist"
-            aria-label="Selected companies"
-          >
+          <div ref={listRef} className="mb-5 flex flex-col gap-2 md:mb-0" role="tablist" aria-label="Selected companies">
             {selectedCompanies.map((company, index) => {
               const selected = company.id === activeCompany?.id
               return (
@@ -236,7 +246,7 @@ export function Step5CompanyBriefs() {
                     else rowRefs.current.delete(company.id)
                   }}
                   data-company-id={company.id}
-                  className="flex shrink-0 items-center gap-1 md:w-full"
+                  className="flex w-full items-center gap-1"
                 >
                   <button
                     type="button"
@@ -244,9 +254,8 @@ export function Step5CompanyBriefs() {
                     aria-selected={selected}
                     onClick={() => setActiveId(company.id)}
                     className={[
-                      'min-h-9 shrink-0 cursor-pointer rounded-full border px-4 text-sm font-semibold transition-colors duration-150',
+                      'min-h-9 w-full flex-1 cursor-pointer rounded-xl border px-4 text-left text-sm font-semibold transition-colors duration-150',
                       'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                      'md:w-full md:flex-1 md:text-left md:rounded-xl',
                       selected ? 'border-primary bg-primary text-on-primary' : 'border-border bg-card text-card-foreground',
                     ].join(' ')}
                   >
@@ -258,10 +267,10 @@ export function Step5CompanyBriefs() {
                     aria-label={`Reorder ${company.companyName || 'company'} - drag, or use arrow keys`}
                     onPointerDown={handlePointerDown(company.id)}
                     onKeyDown={(event) => {
-                      if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') {
+                      if (event.key === 'ArrowUp') {
                         event.preventDefault()
                         moveSelectedCompany(company.id, -1)
-                      } else if (event.key === 'ArrowDown' || event.key === 'ArrowRight') {
+                      } else if (event.key === 'ArrowDown') {
                         event.preventDefault()
                         moveSelectedCompany(company.id, 1)
                       }
