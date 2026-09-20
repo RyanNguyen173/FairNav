@@ -1,4 +1,4 @@
-import { Briefcase, GraduationCap, IdentificationCard, Plus, Trash } from '@phosphor-icons/react'
+import { Briefcase, GraduationCap, IdentificationCard, Plus, Trash, Warning } from '@phosphor-icons/react'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { Button } from '../components/Button'
@@ -453,7 +453,7 @@ function EducationEditor({ entries }: { entries: Education[] }) {
 export function AccountSettings() {
   const { state, dispatch } = useWizard()
   const router = useRouter()
-  const { profile } = state
+  const { profile, resume } = state
 
   return (
     <>
@@ -462,6 +462,19 @@ export function AccountSettings() {
         <p className="mb-5 text-sm text-muted-foreground">
           Your resume, skills, and background - shared across every fair you create. Changes save automatically.
         </p>
+
+        {!resume.fileName && (
+          <div className="mb-5 flex items-start gap-3 rounded-xl border border-warning/30 bg-warning/10 p-4">
+            <Warning size={20} weight="fill" className="mt-0.5 shrink-0 text-warning" aria-hidden="true" />
+            <div>
+              <p className="text-sm font-semibold text-foreground">No resume on file</p>
+              <p className="text-sm text-muted-foreground">
+                FairNav can&apos;t match you to companies or write your pitches without one. Upload your resume
+                below to get started.
+              </p>
+            </div>
+          </div>
+        )}
 
         <ResumeSection />
 
