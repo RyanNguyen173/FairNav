@@ -108,62 +108,73 @@ export function Step5CompanyBriefs() {
     dispatch({ type: 'REORDER_SELECTED_COMPANY', id, toIndex: from + delta })
   }
 
+  // Listeners live on window, not the handle button itself: a drag spans
+  // several REORDER dispatches, each re-rendering the list, and a captured
+  // pointer can silently lose capture across that (the browser fires
+  // lostpointercapture, not pointerup) - leaving cleanup stuck forever and
+  // the dragged row frozen mid-air with its transform never cleared. Window
+  // listeners don't depend on any one row surviving the re-renders.
   const handlePointerDown = (id: string) => (event: ReactPointerEvent<HTMLButtonElement>) => {
-    if (event.button !== 0) return
+    if (event.button !== 0 || dragRef.current) return
     const container = listRef.current
     if (!container) return
     const axis = getComputedStyle(container).flexDirection === 'column' ? 'y' : 'x'
-    dragRef.current = { id, axis, start: axis === 'y' ? event.clientY : event.clientX, pointerId: event.pointerId }
-    event.currentTarget.setPointerCapture(event.pointerId)
+    const pointerId = event.pointerId
+    dragRef.current = { id, axis, start: axis === 'y' ? event.clientY : event.clientX, pointerId }
     const row = rowRefs.current.get(id)
     if (row) row.style.zIndex = '10'
     event.preventDefault()
-  }
 
-  const handlePointerMove = (event: ReactPointerEvent<HTMLButtonElement>) => {
-    const drag = dragRef.current
-    if (!drag || drag.pointerId !== event.pointerId) return
-    const row = rowRefs.current.get(drag.id)
-    const container = listRef.current
-    if (!row || !container) return
+    const onMove = (moveEvent: PointerEvent) => {
+      const drag = dragRef.current
+      if (!drag || drag.pointerId !== moveEvent.pointerId) return
+      const draggedRow = rowRefs.current.get(drag.id)
+      if (!draggedRow || !container) return
 
-    const client = drag.axis === 'y' ? event.clientY : event.clientX
-    const delta = client - drag.start
-    row.style.transform = drag.axis === 'y' ? `translateY(${delta}px)` : `translateX(${delta}px)`
+      const client = drag.axis === 'y' ? moveEvent.clientY : moveEvent.clientX
+      const delta = client - drag.start
+      draggedRow.style.transform = drag.axis === 'y' ? `translateY(${delta}px)` : `translateX(${delta}px)`
 
-    const rows = Array.from(container.children) as HTMLDivElement[]
-    const myIndex = rows.findIndex((el) => el.dataset.companyId === drag.id)
-    const myRect = row.getBoundingClientRect()
-    const myMid = drag.axis === 'y' ? myRect.top + myRect.height / 2 : myRect.left + myRect.width / 2
+      const rows = Array.from(container.children) as HTMLDivElement[]
+      const myIndex = rows.findIndex((el) => el.dataset.companyId === drag.id)
+      const myRect = draggedRow.getBoundingClientRect()
+      const myMid = drag.axis === 'y' ? myRect.top + myRect.height / 2 : myRect.left + myRect.width / 2
 
-    for (let i = 0; i < rows.length; i++) {
-      const other = rows[i]
-      if (other.dataset.companyId === drag.id) continue
-      const rect = other.getBoundingClientRect()
-      const mid = drag.axis === 'y' ? rect.top + rect.height / 2 : rect.left + rect.width / 2
-      const crossed = (i < myIndex && myMid < mid) || (i > myIndex && myMid > mid)
-      if (!crossed) continue
+      for (let i = 0; i < rows.length; i++) {
+        const other = rows[i]
+        if (other.dataset.companyId === drag.id) continue
+        const rect = other.getBoundingClientRect()
+        const mid = drag.axis === 'y' ? rect.top + rect.height / 2 : rect.left + rect.width / 2
+        const crossed = (i < myIndex && myMid < mid) || (i > myIndex && myMid > mid)
+        if (!crossed) continue
 
-      const before = new Map<string, DOMRect>()
-      rows.forEach((el) => {
-        const cid = el.dataset.companyId
-        if (cid && cid !== drag.id) before.set(cid, el.getBoundingClientRect())
-      })
-      flipSnapshotRef.current = before
-      dispatch({ type: 'REORDER_SELECTED_COMPANY', id: drag.id, toIndex: i })
-      break
+        const before = new Map<string, DOMRect>()
+        rows.forEach((el) => {
+          const cid = el.dataset.companyId
+          if (cid && cid !== drag.id) before.set(cid, el.getBoundingClientRect())
+        })
+        flipSnapshotRef.current = before
+        dispatch({ type: 'REORDER_SELECTED_COMPANY', id: drag.id, toIndex: i })
+        break
+      }
     }
-  }
 
-  const handlePointerUp = (event: ReactPointerEvent<HTMLButtonElement>) => {
-    const drag = dragRef.current
-    if (!drag || drag.pointerId !== event.pointerId) return
-    const row = rowRefs.current.get(drag.id)
-    if (row) {
-      row.style.transform = ''
-      row.style.zIndex = ''
+    const onUp = (upEvent: PointerEvent) => {
+      if (dragRef.current?.pointerId !== upEvent.pointerId) return
+      const draggedRow = rowRefs.current.get(id)
+      if (draggedRow) {
+        draggedRow.style.transform = ''
+        draggedRow.style.zIndex = ''
+      }
+      dragRef.current = null
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+      window.removeEventListener('pointercancel', onUp)
     }
-    dragRef.current = null
+
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+    window.addEventListener('pointercancel', onUp)
   }
 
   return (
@@ -219,9 +230,6 @@ export function Step5CompanyBriefs() {
                     type="button"
                     aria-label={`Reorder ${company.companyName || 'company'} - drag, or use arrow keys`}
                     onPointerDown={handlePointerDown(company.id)}
-                    onPointerMove={handlePointerMove}
-                    onPointerUp={handlePointerUp}
-                    onPointerCancel={handlePointerUp}
                     onKeyDown={(event) => {
                       if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') {
                         event.preventDefault()
