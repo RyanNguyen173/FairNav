@@ -120,7 +120,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setError(null)
     setAuthenticating(true)
     try {
-      const { data, error: signUpError } = await supabase.auth.signUp({ email, password })
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        // Where the confirmation email's link sends the browser after
+        // Supabase verifies it - must also be added to this project's
+        // Redirect URLs allow-list in the Supabase dashboard, or Supabase
+        // silently ignores it and falls back to the project's Site URL.
+        options: { emailRedirectTo: `${window.location.origin}/account-created` },
+      })
       if (signUpError) {
         setError(signUpError.message)
         return { needsEmailConfirmation: false }
