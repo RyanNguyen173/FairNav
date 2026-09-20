@@ -1,11 +1,14 @@
-import { ApiError, GoogleGenAI, ThinkingLevel } from '@google/genai'
-import type { GenerateContentParameters } from '@google/genai'
+import { ApiError, GoogleGenAI, ThinkingLevel, Type } from '@google/genai'
+import type { GenerateContentParameters, Schema } from '@google/genai'
 import { NextResponse, type NextRequest } from 'next/server'
-import type { ProfileData } from '../wizard/types'
 
 /**
- * Shared helpers for the 4 Gemini-only route handlers
- * (app/api/parse-resume, parse-directory, rank-companies, generate-pitches).
+ * Shared helpers for the Gemini-only route handlers (app/api/parse-resume,
+ * parse-directory, rank-companies, generate-pitches, and their app/api/dev
+ * counterparts used by the ai-playground tuning tool). The prompt text
+ * itself lives in aiPrompts.ts instead, since that file is also imported
+ * client-side by the playground page and must stay free of the
+ * `@google/genai` SDK.
  */
 
 export const MODEL = 'gemini-3.5-flash-lite'
@@ -48,13 +51,60 @@ export async function generateWithRetry(ai: GoogleGenAI, params: GenerateContent
   throw new Error('unreachable')
 }
 
-export function describeProfile(profile: ProfileData): string {
-  return [
-    `- Major: ${profile.major || 'Undeclared'}`,
-    `- Graduation year: ${profile.gradYear || 'Unknown'}`,
-    `- Skills: ${profile.skills.join(', ') || 'None listed'}`,
-    `- Interests: ${profile.interests.join(', ') || 'None listed'}`,
-  ].join('\n')
+export const RANK_COMPANIES_SCHEMA: Schema = {
+  type: Type.OBJECT,
+  properties: {
+    rankedCompanies: {
+      type: Type.ARRAY,
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          index: { type: Type.INTEGER },
+          matchScore: { type: Type.INTEGER },
+          summary: { type: Type.STRING },
+          industry: { type: Type.STRING },
+          openRoles: { type: Type.ARRAY, items: { type: Type.STRING } },
+        },
+        required: ['index', 'matchScore', 'summary', 'industry', 'openRoles'],
+      },
+    },
+  },
+  required: ['rankedCompanies'],
+}
+
+export const GENERATE_PITCHES_SCHEMA: Schema = {
+  type: Type.OBJECT,
+  properties: {
+    pitches: {
+      type: Type.ARRAY,
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          companyName: { type: Type.STRING },
+          elevatorPitch: { type: Type.STRING },
+          questions: { type: Type.ARRAY, items: { type: Type.STRING } },
+          overview: { type: Type.STRING },
+          locations: { type: Type.ARRAY, items: { type: Type.STRING } },
+          values: { type: Type.ARRAY, items: { type: Type.STRING } },
+          industries: { type: Type.ARRAY, items: { type: Type.STRING } },
+          majors: { type: Type.ARRAY, items: { type: Type.STRING } },
+          positions: { type: Type.ARRAY, items: { type: Type.STRING } },
+        },
+        required: [
+          'companyName',
+          'elevatorPitch',
+          'questions',
+          'overview',
+          'locations',
+          'values',
+          'industries',
+          'majors',
+          'positions',
+        ],
+      },
+    },
+  },
+  required: ['pitches'],
 }
 
 /** Standard client init + error handling wrapper around a POST body's `payload`. */

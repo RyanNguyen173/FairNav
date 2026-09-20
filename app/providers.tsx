@@ -37,7 +37,9 @@ function RequireResumeGate({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (checked.current) return
     checked.current = true
-    if (!state.resume.fileName && pathname !== '/account') {
+    // /dev/* (the ai-playground tuning tool) doesn't need a resume - it
+    // calls Gemini directly with data typed into the page itself.
+    if (!state.resume.fileName && pathname !== '/account' && !pathname.startsWith('/dev/')) {
       router.replace('/account')
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
