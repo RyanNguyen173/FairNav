@@ -1,4 +1,4 @@
-import { Briefcase, CaretLeft, ChatCircleDots, GraduationCap, Heart, Lightbulb, MapPin, Tag } from '@phosphor-icons/react'
+import { Briefcase, CaretLeft, ChatCircleDots, CheckCircle, GraduationCap, Heart, Lightbulb, MapPin, Tag } from '@phosphor-icons/react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { BoothNumbers } from '../components/BoothNumbers'
@@ -128,9 +128,20 @@ export function Step6FairModeHUD() {
           <div className={['flex flex-col gap-5 transition-opacity duration-150', isVisited ? 'opacity-60' : ''].join(' ')}>
             <SectionCard>
               <div className="mb-3 flex items-start justify-between gap-3">
-                <div>
-                  <BoothNumbers boothNumbers={company.boothNumbers} />
-                  <h2 className="text-lg font-bold text-foreground">{company.companyName || 'Unlisted company'}</h2>
+                <div className="flex items-start gap-3">
+                  <span
+                    className={[
+                      'flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold',
+                      isVisited ? 'bg-muted text-muted-foreground' : 'bg-primary text-on-primary',
+                    ].join(' ')}
+                    title={`Priority ${index + 1} of ${queue.length}`}
+                  >
+                    {isVisited ? <CheckCircle size={18} weight="fill" aria-hidden="true" /> : index + 1}
+                  </span>
+                  <div>
+                    <BoothNumbers boothNumbers={company.boothNumbers} />
+                    <h2 className="text-lg font-bold text-foreground">{company.companyName || 'Unlisted company'}</h2>
+                  </div>
                 </div>
                 <MatchBadge percent={company.matchScore} />
               </div>

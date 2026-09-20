@@ -5,9 +5,9 @@ import type { FairProfile } from '../wizard/types'
 import { useWizard } from '../wizard/WizardContext'
 import { computeFairStatus, dayDelta, TAG_CLASS } from './fairUtils'
 
-/** Live the moment fair mode is actually running, or the moment the fair's own date arrives - not just once someone has clicked in. */
+/** Live only on the fair's own date - never earlier, whether or not fair mode has already been started that day. */
 function isFairLive(fair: FairProfile): boolean {
-  return fair.fairMode.active || (fair.date ? dayDelta(fair.date) === 0 : false)
+  return fair.date ? dayDelta(fair.date) === 0 : false
 }
 
 /** Has a queue to walk and isn't live. Briefs are optional (generated on demand), so this only needs a selection, not generated prep. */
@@ -44,18 +44,20 @@ function LiveCard({ fair }: { fair: FairProfile }) {
   const { dispatch } = useWizard()
   const router = useRouter()
   return (
-    <div className="fn-card flex flex-col items-center gap-2 rounded-2xl bg-card p-10 text-center shadow-hairline">
-      <span className="inline-flex items-center gap-3 text-4xl font-extrabold uppercase tracking-[-0.02em] text-destructive">
-        <span className="inline-block h-4 w-4 animate-pulse rounded-full bg-destructive" aria-hidden="true" />
-        Live
-      </span>
-      <p className="mt-1 text-lg font-semibold tracking-[-0.02em] text-card-foreground">{fair.name || 'Untitled fair'}</p>
-      <div className="mt-2 flex w-full max-w-xs flex-col gap-3">
-        <DayCardMeta fair={fair} />
-        <Button fullWidth onClick={() => startFairMode(dispatch, router, fair)}>
-          {fair.fairMode.active ? 'Continue fair mode' : 'Start fair mode'}
-        </Button>
+    <div className="fn-card flex flex-col gap-2.5 rounded-2xl bg-card p-6 shadow-hairline">
+      <div className="flex items-start justify-between gap-3">
+        <div className="text-[19px] font-semibold leading-[1.25] tracking-[-0.03em] text-card-foreground">
+          {fair.name || 'Untitled fair'}
+        </div>
+        <span className={[TAG_CLASS, 'gap-1.5 bg-destructive/10 text-destructive'].join(' ')}>
+          <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-destructive" aria-hidden="true" />
+          Live
+        </span>
       </div>
+      <DayCardMeta fair={fair} />
+      <Button fullWidth className="mt-1" onClick={() => startFairMode(dispatch, router, fair)}>
+        {fair.fairMode.active ? 'Continue fair mode' : 'Start fair mode'}
+      </Button>
     </div>
   )
 }
