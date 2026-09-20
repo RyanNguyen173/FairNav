@@ -12,6 +12,7 @@ import {
 } from '@phosphor-icons/react'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import { BoothNumbers } from '../components/BoothNumbers'
 import { Button } from '../components/Button'
 import { FairSubNav } from '../components/FairSubNav'
 import { Header } from '../components/Header'
@@ -133,7 +134,7 @@ export function Step5CompanyBriefs() {
                     selected ? 'border-primary bg-primary text-on-primary' : 'border-border bg-card text-card-foreground',
                   ].join(' ')}
                 >
-                  {company.companyName}
+                  {company.companyName || 'Unlisted company'}
                 </button>
               )
             })}
@@ -142,10 +143,8 @@ export function Step5CompanyBriefs() {
           {activeCompany && activePrep && (
             <div role="tabpanel">
               <div className="mb-5">
-                <p className="text-xs font-medium text-muted-foreground">
-                  Booth {activeCompany.boothNumbers.join(', ') || '—'}
-                </p>
-                <h2 className="text-lg font-bold text-foreground">{activeCompany.companyName}</h2>
+                <BoothNumbers boothNumbers={activeCompany.boothNumbers} />
+                <h2 className="text-lg font-bold text-foreground">{activeCompany.companyName || 'Unlisted company'}</h2>
               </div>
 
               <div className="mb-5">

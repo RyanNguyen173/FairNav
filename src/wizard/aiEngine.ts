@@ -67,7 +67,25 @@ export async function parseResume(file: File): Promise<ParsedResume> {
   }
 }
 
-type RankedCompany = Omit<Company, 'id' | 'x' | 'y'>
+interface MergedCompany {
+  companyName: string
+  boothNumbers: string[]
+}
+
+/**
+ * What rank-companies actually generates - deliberately NOT companyName/
+ * boothNumbers. On a long list the model sometimes blanks or drops those
+ * when asked to echo them back verbatim; `index` (its 1-based position in
+ * the prompt) is a far more reliable correlation key, so the real name and
+ * booths always come from our own already-correct `merged` list instead.
+ */
+interface RankedCompanyResult {
+  index: number
+  matchScore: number
+  summary: string
+  industry: string
+  openRoles: string[]
+}
 
 /**
  * A directory can list the same company more than once (multiple booths,
@@ -75,8 +93,8 @@ type RankedCompany = Omit<Company, 'id' | 'x' | 'y'>
  * every booth number before ranking, so Matches/Briefs show one card per
  * company rather than a duplicate per booth.
  */
-function mergeBoothsByCompany(booths: Booth[]): { companyName: string; boothNumbers: string[] }[] {
-  const merged = new Map<string, { companyName: string; boothNumbers: string[] }>()
+function mergeBoothsByCompany(booths: Booth[]): MergedCompany[] {
+  const merged = new Map<string, MergedCompany>()
   for (const booth of booths) {
     const name = booth.companyName.trim()
     if (!name) continue
@@ -104,13 +122,31 @@ export async function analyzeFair(
       : null
 
     const { booths } = await callApi<{ booths: Booth[] }>('/api/parse-directory', { rawText, file })
-    const { rankedCompanies } = await callApi<{ rankedCompanies: RankedCompany[] }>('/api/rank-companies', {
+    const merged = mergeBoothsByCompany(booths)
+    const { rankedCompanies } = await callApi<{ rankedCompanies: RankedCompanyResult[] }>('/api/rank-companies', {
       profile,
-      companies: mergeBoothsByCompany(booths),
+      companies: merged,
     })
 
-    return rankedCompanies.map((company, index) => {
-      const { x, y } = boothCoordinatesForIndex(index, rankedCompanies.length)
+    // Every company we know is real (from `merged`) gets a card - if the
+    // model dropped its index from the response, it still shows up, just
+    // with neutral placeholders instead of AI-generated fields.
+    const byIndex = new Map(rankedCompanies.map((result) => [result.index, result]))
+    const scored = merged.map((company, i) => {
+      const result = byIndex.get(i + 1)
+      return {
+        companyName: company.companyName,
+        boothNumbers: company.boothNumbers,
+        summary: result?.summary ?? '',
+        industry: result?.industry ?? '',
+        openRoles: result?.openRoles ?? [],
+        matchScore: result?.matchScore ?? 0,
+      }
+    })
+    scored.sort((a, b) => b.matchScore - a.matchScore)
+
+    return scored.map((company, index) => {
+      const { x, y } = boothCoordinatesForIndex(index, scored.length)
       return {
         ...company,
         id: `company-${index}-${company.companyName.replace(/\s+/g, '-').toLowerCase()}`,

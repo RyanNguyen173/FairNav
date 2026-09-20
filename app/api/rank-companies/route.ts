@@ -27,6 +27,12 @@ export async function POST(request: NextRequest) {
       })
       .join('\n')
 
+    // The model asked to echo back companyName/boothNumbers verbatim for every
+    // entry sometimes drops or blanks one on a long list - rather than trust
+    // that, it returns `index` (the 1-based number from the prompt) and the
+    // caller re-attaches the already-known-correct name/booths itself. Only
+    // the genuinely AI-generated fields (score/overview/industry/roles) come
+    // from here.
     const prompt = `Rank these career fair companies for a student, from best to worst fit.
 
 Student profile:
@@ -35,12 +41,13 @@ ${describeProfile(profile)}
 Companies attending, with booth numbers:
 ${companyList}
 
-For each company, keep its companyName and boothNumbers array exactly as given, and add:
+For each and every one of the ${companies.length} companies listed above (do not skip or merge any), return:
+- index: its number from the list above (1-${companies.length}).
 - summary: 1-2 sentences that are a genuine company overview - what the company actually does/sells/builds. Not a sentence about why it fits this student.
 - industry: the single primary industry this company operates in (e.g. "Fintech", "Aerospace", "Healthcare", "Software Engineering").
 - openRoles: 1-2 plausible open roles.
 - matchScore: 0-100 reflecting fit with this student.
-Order the array from highest matchScore to lowest.`
+You must return exactly ${companies.length} results, one per index, with no duplicate or missing index.`
 
     const response = await generateWithRetry(ai, {
       model: MODEL,
@@ -55,14 +62,13 @@ Order the array from highest matchScore to lowest.`
               items: {
                 type: Type.OBJECT,
                 properties: {
-                  companyName: { type: Type.STRING },
-                  boothNumbers: { type: Type.ARRAY, items: { type: Type.STRING } },
+                  index: { type: Type.INTEGER },
                   matchScore: { type: Type.INTEGER },
                   summary: { type: Type.STRING },
                   industry: { type: Type.STRING },
                   openRoles: { type: Type.ARRAY, items: { type: Type.STRING } },
                 },
-                required: ['companyName', 'boothNumbers', 'matchScore', 'summary', 'industry', 'openRoles'],
+                required: ['index', 'matchScore', 'summary', 'industry', 'openRoles'],
               },
             },
           },
