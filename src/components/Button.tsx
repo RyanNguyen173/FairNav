@@ -13,8 +13,9 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 const VARIANT_CLASSES: Record<Variant, string> = {
   primary:
     'bg-primary text-on-primary hover:opacity-90 focus-visible:ring-ring disabled:opacity-50',
+  // The Vesper hairline secondary: paper/white with a translucent edge, not a filled button.
   secondary:
-    'bg-muted text-foreground hover:opacity-90 focus-visible:ring-ring disabled:opacity-50',
+    'bg-card text-foreground shadow-hairline hover:bg-muted focus-visible:ring-ring disabled:opacity-50',
   ghost:
     'bg-transparent text-foreground hover:bg-muted focus-visible:ring-ring disabled:opacity-50',
   destructive:
@@ -37,9 +38,9 @@ export function Button({
       disabled={disabled || loading}
       className={[
         'inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-5 py-2.5',
-        'text-[15px] font-semibold transition-opacity duration-150 ease-out',
+        'text-[15px] font-semibold transition-[transform,opacity,background-color,box-shadow] duration-150 ease-out active:scale-[0.97]',
         'cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
-        'disabled:cursor-not-allowed',
+        'disabled:cursor-not-allowed disabled:active:scale-100',
         fullWidth ? 'w-full' : '',
         VARIANT_CLASSES[variant],
         className,

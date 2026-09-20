@@ -105,7 +105,7 @@ export function Step5CompanyBriefs() {
                 <SectionCard>
                   <div className="mb-3 flex items-center justify-between gap-2">
                     <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                      <Lightbulb size={16} weight="fill" className="text-accent" aria-hidden="true" />
+                      <Lightbulb size={16} weight="fill" className="text-accent-ink" aria-hidden="true" />
                       Tailored elevator pitch
                     </h3>
                     <CopyButton text={activePrep.elevatorPitch} />

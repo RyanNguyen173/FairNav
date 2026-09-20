@@ -1,57 +1,90 @@
-@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap");
 @import "tailwindcss";
 
 @custom-variant dark (&:where(.dark, .dark *));
 
 /*
- * FairNav design tokens - "Framer minimalist" system: clean typography,
- * generous whitespace, subtle 1px card borders, blue accent highlights
- * (#0066FF / #3B82F6). Dark values keep the same 4.5:1 text-contrast floor
- * rather than a naive inversion - buttons stay dark-text-on-bright-blue in
- * both themes since white text on a mid-tone blue like #3B82F6 fails AA.
+ * FairNav design tokens - "Vesper" system (see .design-sync handoff):
+ * clean white paper, soft sky-blue surfaces and bands, deep navy for
+ * weight, hairline edges instead of solid borders, Public Sans body copy
+ * with Geist Mono for labels/metadata. Legacy token names (primary,
+ * secondary, background, card, muted, border, destructive, success, ring)
+ * are kept so every existing component re-themes automatically; the real
+ * Vesper names (paper, surface, ink, accent-ink, accent-wash, inverse,
+ * line, control-line...) are exposed alongside them for new work to use
+ * directly. Dark theme ("Midnight") keeps the same token *roles*, not a
+ * naive inversion - the sky accent stays sky, only grounds and ink flip.
  */
 @theme {
-  --font-sans: "Plus Jakarta Sans", system-ui, "Segoe UI", Roboto, sans-serif;
+  --font-sans: "Public Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, monospace;
 
-  --color-primary: #0066ff;
-  --color-on-primary: #ffffff;
-  --color-secondary: #3b82f6;
-  --color-on-secondary: #0f172a;
-  --color-accent: #2563eb;
-  --color-on-accent: #ffffff;
-  --color-background: #f8fafc;
-  --color-foreground: #0f172a;
-  --color-card: #ffffff;
-  --color-card-foreground: #0f172a;
-  --color-muted: #eef2f8;
-  --color-muted-foreground: #64748b;
-  --color-border: #e2e8f0;
-  --color-destructive: #dc2626;
-  --color-on-destructive: #ffffff;
-  --color-success: #16a34a;
+  /* True Vesper names */
+  --color-paper: #ffffff;
+  --color-surface: #f5f9fe;
+  --color-surface-sunken: #e8f1fb;
+  --color-ink: #0e1726;
+  --color-ink-muted: #4b586b;
+  --color-ink-subtle: #5f6d83;
+  --color-line: #dde8f5;
+  --color-line-strong: #c3d5ea;
+  --color-control-line: #7d8ea6;
+  --color-accent: #8cc4f5;
+  --color-on-accent: #0e1726;
+  --color-accent-ink: #1a5fb0;
+  --color-accent-wash: #e3f0fd;
+  --color-inverse: #0b2447;
+  --color-on-inverse: #ffffff;
+  --color-success: #0e7a6b;
   --color-on-success: #ffffff;
-  --color-ring: #0066ff;
+  --color-warning: #8f5f00;
+  --color-danger: #b42318;
+  --color-on-danger: #ffffff;
+  --shadow-hairline: 0 0 0 1px rgba(11, 36, 71, 0.1);
+  --shadow-soft:
+    0 4px 12px 2px rgba(11, 36, 71, 0.04), 0 24px 60px 4px rgba(11, 36, 71, 0.08);
+  --radius-pill: 999px;
+
+  /* Legacy aliases - every existing component keeps working unchanged */
+  --color-primary: var(--color-inverse);
+  --color-on-primary: var(--color-on-inverse);
+  --color-secondary: var(--color-accent);
+  --color-on-secondary: var(--color-on-accent);
+  --color-background: var(--color-surface);
+  --color-foreground: var(--color-ink);
+  --color-card: var(--color-paper);
+  --color-card-foreground: var(--color-ink);
+  --color-muted: var(--color-surface-sunken);
+  --color-muted-foreground: var(--color-ink-muted);
+  --color-border: var(--color-line);
+  --color-destructive: var(--color-danger);
+  --color-on-destructive: var(--color-on-danger);
+  --color-ring: var(--color-ink);
 }
 
 .dark {
-  --color-primary: #3b82f6;
-  --color-on-primary: #04070c;
-  --color-secondary: #60a5fa;
-  --color-on-secondary: #04070c;
-  --color-accent: #93c5fd;
-  --color-on-accent: #0b0f17;
-  --color-background: #0b0f17;
-  --color-foreground: #e2e8f0;
-  --color-card: #111827;
-  --color-card-foreground: #e2e8f0;
-  --color-muted: #151c2a88;
-  --color-muted-foreground: #94a3b8;
-  --color-border: #1e293b;
-  --color-destructive: #f87171;
-  --color-on-destructive: #450a0a;
-  --color-success: #4ade80;
-  --color-on-success: #052e14;
-  --color-ring: #3b82f6;
+  --color-paper: #07172a;
+  --color-surface: #0d2038;
+  --color-surface-sunken: #051220;
+  --color-ink: #eef4fb;
+  --color-ink-muted: #a9b8cc;
+  --color-ink-subtle: #8494a7;
+  --color-line: #1c3048;
+  --color-line-strong: #2b4260;
+  --color-control-line: #6b7f96;
+  --color-accent: #7fbcf5;
+  --color-on-accent: #0e1726;
+  --color-accent-ink: #8ec5ff;
+  --color-accent-wash: #12304f;
+  --color-inverse: #eef4fb;
+  --color-on-inverse: #07172a;
+  --color-success: #4dc7b5;
+  --color-on-success: #07172a;
+  --color-warning: #e0b04a;
+  --color-danger: #f97066;
+  --color-on-danger: #450a0a;
+  --shadow-hairline: 0 0 0 1px rgba(238, 244, 251, 0.12);
+  --shadow-soft: 0 24px 60px 4px rgba(0, 0, 0, 0.35);
 }
 
 * {
@@ -76,6 +109,40 @@ body {
   color: var(--color-foreground);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+@keyframes fn-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Fair Board card entrance: fade + rise, staggered 50ms apart. */
+.fn-card {
+  animation: fn-rise 300ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+.fn-grid > .fn-card:nth-child(1) {
+  animation-delay: 0ms;
+}
+.fn-grid > .fn-card:nth-child(2) {
+  animation-delay: 50ms;
+}
+.fn-grid > .fn-card:nth-child(3) {
+  animation-delay: 100ms;
+}
+.fn-grid > .fn-card:nth-child(4) {
+  animation-delay: 150ms;
+}
+.fn-grid > .fn-card:nth-child(5) {
+  animation-delay: 200ms;
+}
+.fn-grid > .fn-card:nth-child(6) {
+  animation-delay: 250ms;
 }
 
 @media (prefers-reduced-motion: reduce) {

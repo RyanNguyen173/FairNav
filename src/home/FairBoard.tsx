@@ -1,4 +1,4 @@
-import { Buildings, CalendarBlank, Copy, MapPin, PencilSimple, Plus, Trash } from '@phosphor-icons/react'
+import { Buildings, Copy, PencilSimple, Plus, Trash } from '@phosphor-icons/react'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { Button } from '../components/Button'
@@ -8,12 +8,12 @@ import type { FairProfile, FairStatus, TargetPosition } from '../wizard/types'
 import { useWizard } from '../wizard/WizardContext'
 
 const STATUS_LABEL: Record<FairStatus, string> = {
-  'in-progress': 'In Progress',
+  'in-progress': 'In progress',
   completed: 'Completed',
 }
 
 const STATUS_CLASS: Record<FairStatus, string> = {
-  'in-progress': 'bg-secondary text-on-secondary',
+  'in-progress': 'bg-surface text-muted-foreground shadow-hairline',
   completed: 'bg-success text-on-success',
 }
 
@@ -23,6 +23,35 @@ function computeFairStatus(fair: FairProfile): FairStatus {
     fair.selectedCompanyIds.length > 0 &&
     fair.selectedCompanyIds.every((id) => fair.fairMode.companyState[id]?.visited)
   return visitedAll ? 'completed' : 'in-progress'
+}
+
+function formatFairDate(iso: string): string {
+  const [y, m, d] = iso.split('-').map(Number)
+  return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
+/** Whole days between an ISO date and today, ignoring time of day. Negative means the date has passed. */
+function dayDelta(iso: string): number {
+  const [y, m, d] = iso.split('-').map(Number)
+  const target = new Date(y, m - 1, d).getTime()
+  const now = new Date()
+  const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
+  return Math.round((target - todayMidnight) / 86_400_000)
+}
+
+const TAG_CLASS =
+  'inline-flex shrink-0 items-center rounded-[4px] px-2 py-1 font-mono text-[10px] uppercase tracking-[0.06em]'
+
+function DateBadges({ date }: { date: string }) {
+  const delta = dayDelta(date)
+  if (delta === 0) {
+    return <span className={[TAG_CLASS, 'bg-accent text-on-accent'].join(' ')}>Today</span>
+  }
+  return (
+    <span className={[TAG_CLASS, 'bg-surface text-muted-foreground shadow-hairline'].join(' ')}>
+      {delta > 0 ? `In ${delta} days` : `${Math.abs(delta)} days ago`}
+    </span>
+  )
 }
 
 function CreateFairModal({
@@ -37,7 +66,6 @@ function CreateFairModal({
   const { dispatch } = useWizard()
   const router = useRouter()
   const [name, setName] = useState('')
-  const [date, setDate] = useState('')
   const [location, setLocation] = useState('')
   const [targetPosition, setTargetPosition] = useState<TargetPosition>(defaultTargetPosition)
 
@@ -45,16 +73,15 @@ function CreateFairModal({
 
   const handleSave = () => {
     if (!canSave) return
-    dispatch({ type: 'ADD_FAIR_PROFILE', name: name.trim(), date, location, targetPosition })
+    dispatch({ type: 'ADD_FAIR_PROFILE', name: name.trim(), date: '', location, targetPosition })
     setName('')
-    setDate('')
     setLocation('')
     onClose()
     router.push('/fair')
   }
 
   return (
-    <Modal open={open} title="Create new fair" onClose={onClose}>
+    <Modal open={open} title="Create a fair" onClose={onClose}>
       <div className="space-y-4">
         <div>
           <FieldLabel htmlFor="new-fair-name">Career fair name</FieldLabel>
@@ -66,11 +93,7 @@ function CreateFairModal({
           />
         </div>
         <div>
-          <FieldLabel htmlFor="new-fair-date">Date</FieldLabel>
-          <TextInput id="new-fair-date" type="date" value={date} onChange={(event) => setDate(event.target.value)} />
-        </div>
-        <div>
-          <FieldLabel htmlFor="new-fair-location">Location / venue</FieldLabel>
+          <FieldLabel htmlFor="new-fair-location">Location or venue</FieldLabel>
           <TextInput
             id="new-fair-location"
             value={location}
@@ -96,7 +119,7 @@ function CreateFairModal({
                 className={[
                   'min-h-10 cursor-pointer rounded-lg text-sm font-semibold transition-colors duration-150',
                   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                  targetPosition === value ? 'bg-card text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground',
+                  targetPosition === value ? 'bg-card text-primary shadow-hairline' : 'text-muted-foreground hover:text-foreground',
                 ].join(' ')}
               >
                 {value === 'internship' ? 'Internship' : 'Full-Time'}
@@ -105,7 +128,7 @@ function CreateFairModal({
           </div>
         </div>
         <Button fullWidth disabled={!canSave} onClick={handleSave}>
-          Save &amp; Proceed to Directory Ingestion
+          Save and add a directory
         </Button>
       </div>
     </Modal>
@@ -128,72 +151,72 @@ function FairCard({ fair }: { fair: FairProfile }) {
   }
 
   const status = computeFairStatus(fair)
+  const boothLabel = `${fair.companies.length} target ${fair.companies.length === 1 ? 'booth' : 'booths'}${
+    status === 'completed' ? ' · all visited' : ''
+  }`
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-4">
-      <div className="mb-2 flex items-start justify-between gap-2">
-        <h3 className="text-[15px] font-bold text-card-foreground">{fair.name || 'Untitled fair'}</h3>
-        <span className={['shrink-0 rounded-full px-2.5 py-1 text-xs font-bold', STATUS_CLASS[status]].join(' ')}>
-          {STATUS_LABEL[status]}
-        </span>
+    <div className="fn-card flex flex-col gap-3.5 rounded-2xl bg-card p-6 shadow-hairline">
+      <div className="flex items-start justify-between gap-3">
+        <div
+          className={[
+            'text-[19px] font-semibold leading-[1.25] tracking-[-0.03em]',
+            fair.name ? 'text-card-foreground' : 'text-ink-subtle',
+          ].join(' ')}
+        >
+          {fair.name || 'Untitled fair'}
+        </div>
+        <span className={[TAG_CLASS, 'shrink-0', STATUS_CLASS[status]].join(' ')}>{STATUS_LABEL[status]}</span>
       </div>
 
-      {(fair.date || fair.location) && (
-        <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-          {fair.date && (
-            <span className="flex items-center gap-1">
-              <CalendarBlank size={13} weight="fill" aria-hidden="true" />
-              {fair.date}
-            </span>
-          )}
-          {fair.location && (
-            <span className="flex items-center gap-1">
-              <MapPin size={13} weight="fill" aria-hidden="true" />
-              {fair.location}
-            </span>
-          )}
+      {fair.date ? (
+        <div className="flex flex-col gap-1 text-sm leading-relaxed text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-2">
+            <span>{formatFairDate(fair.date)}</span>
+            <DateBadges date={fair.date} />
+          </div>
+          {fair.location && <div>{fair.location}</div>}
         </div>
+      ) : (
+        <p className="text-sm leading-relaxed text-ink-subtle">
+          No date or venue yet. Open it to add the details and upload the exhibitor directory.
+        </p>
       )}
 
-      <div className="mb-3 flex items-center gap-2">
-        <span className="rounded-full border border-border bg-background px-2.5 py-1 text-xs font-medium text-foreground">
+      <div className="flex flex-wrap items-center gap-2.5">
+        <span className={[TAG_CLASS, 'bg-accent-wash text-accent-ink'].join(' ')}>
           {fair.targetPosition === 'internship' ? 'Internship' : 'Full-Time'}
         </span>
         <span className="flex items-center gap-1 text-xs text-muted-foreground">
           <Buildings size={13} weight="fill" aria-hidden="true" />
-          {fair.companies.length} target {fair.companies.length === 1 ? 'booth' : 'booths'}
+          {boothLabel}
         </span>
       </div>
 
-      <div className="mb-2">
-        <Button
-          variant="secondary"
-          fullWidth
-          icon={<PencilSimple size={15} weight="bold" aria-hidden="true" />}
-          onClick={handleEdit}
-        >
+      <div className="mt-0.5 flex flex-col gap-2">
+        <Button variant="secondary" fullWidth icon={<PencilSimple size={15} weight="bold" aria-hidden="true" />} onClick={handleEdit}>
           Edit
         </Button>
-      </div>
-      <div className="flex items-center gap-2">
-        <button
-          type="button"
-          onClick={handleDuplicate}
-          aria-label={`Duplicate ${fair.name || 'this fair'}`}
-          className="flex h-9 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-border text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <Copy size={14} weight="bold" aria-hidden="true" />
-          Duplicate
-        </button>
-        <button
-          type="button"
-          onClick={handleDelete}
-          aria-label={`Delete ${fair.name || 'this fair'}`}
-          className="flex h-9 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-border text-sm font-medium text-muted-foreground hover:bg-muted hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <Trash size={14} weight="bold" aria-hidden="true" />
-          Delete
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleDuplicate}
+            aria-label={`Duplicate ${fair.name || 'this fair'}`}
+            className="flex h-9 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-lg text-sm font-medium text-muted-foreground shadow-hairline transition-[background-color,color] duration-150 hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.97]"
+          >
+            <Copy size={14} weight="bold" aria-hidden="true" />
+            Duplicate
+          </button>
+          <button
+            type="button"
+            onClick={handleDelete}
+            aria-label={`Delete ${fair.name || 'this fair'}`}
+            className="flex h-9 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-lg text-sm font-medium text-muted-foreground shadow-hairline transition-[background-color,color] duration-150 hover:bg-muted hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.97]"
+          >
+            <Trash size={14} weight="bold" aria-hidden="true" />
+            Delete
+          </button>
+        </div>
       </div>
     </div>
   )
@@ -214,13 +237,13 @@ export function FairBoard() {
   return (
     <>
       <div className="mb-4 flex items-center justify-between gap-2">
-        <p className="text-sm text-muted-foreground">Each fair keeps its own matched companies, pitches, and progress.</p>
+        <p className="text-sm text-muted-foreground">Each fair keeps its own matched companies, pitches and progress.</p>
         <Button icon={<Plus size={16} weight="bold" aria-hidden="true" />} onClick={() => setModalOpen(true)}>
-          Create New Fair
+          Create a fair
         </Button>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="fn-grid grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {fairProfiles.map((fair) => (
           <FairCard key={fair.id} fair={fair} />
         ))}

@@ -3,12 +3,27 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '../auth/AuthContext'
 
+/**
+ * Two letters for the avatar circle - the first letter of up to the first
+ * two "."/"_"/"-"/"+"-separated segments of the email's local part, or the
+ * first two characters if there's only one segment. No display name exists
+ * to draw from (accounts are email/password only).
+ */
+function getInitials(email: string): string {
+  const localPart = email.split('@')[0] ?? ''
+  const segments = localPart.split(/[._+-]/).filter(Boolean)
+  const initials =
+    segments.length >= 2 ? segments[0][0] + segments[1][0] : localPart.slice(0, 2)
+  return initials.toUpperCase()
+}
+
 /** Top-right account menu: settings + sign out. Available everywhere, not just Home. */
 export function AccountMenu() {
   const { session, signOut } = useAuth()
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
+  const email = session?.user?.email
 
   useEffect(() => {
     if (!open) return
@@ -34,22 +49,24 @@ export function AccountMenu() {
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label="Account menu"
-        className="flex h-9 cursor-pointer items-center gap-1 rounded-full px-2 text-muted-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="flex h-9 cursor-pointer items-center gap-1 rounded-full px-1 text-muted-foreground hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
-        <UserCircle size={22} weight="fill" aria-hidden="true" />
+        {email ? (
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-accent-wash text-[13px] font-semibold text-accent-ink">
+            {getInitials(email)}
+          </span>
+        ) : (
+          <UserCircle size={22} weight="fill" aria-hidden="true" />
+        )}
         <CaretDown size={12} weight="bold" aria-hidden="true" />
       </button>
 
       {open && (
         <div
           role="menu"
-          className="absolute right-0 top-11 z-30 w-56 overflow-hidden rounded-xl border border-border bg-card py-1 shadow-lg"
+          className="absolute right-0 top-11 z-30 w-56 overflow-hidden rounded-xl border border-border bg-card py-1 shadow-soft"
         >
-          {session?.user?.email && (
-            <p className="truncate border-b border-border px-3.5 py-2 text-xs text-muted-foreground">
-              {session.user.email}
-            </p>
-          )}
+          {email && <p className="truncate border-b border-border px-3.5 py-2 text-xs text-muted-foreground">{email}</p>}
           <button
             type="button"
             role="menuitem"
