@@ -213,7 +213,7 @@ export function Step6FairModeHUD() {
 
   return (
     <div className="flex flex-1 flex-col">
-      <Header title="Fair Mode" onBack={exitFairMode} />
+      <Header title="Fair Day" onBack={exitFairMode} />
 
       <div className="border-b border-border bg-background px-4 py-3 md:px-8">
         <div className="mx-auto max-w-md md:max-w-5xl">

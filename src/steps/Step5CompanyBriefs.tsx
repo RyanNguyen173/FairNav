@@ -59,7 +59,7 @@ export function Step5CompanyBriefs() {
   const { companies, selectedCompanyIds, prep } = fair
   const enterFairMode = () => {
     dispatch({ type: 'ENTER_FAIR_MODE' })
-    router.push('/')
+    router.push('/fair-day')
   }
   const selectedCompanies = selectedCompanyIds
     .map((id) => companies.find((c) => c.id === id))

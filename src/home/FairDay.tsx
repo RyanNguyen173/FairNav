@@ -1,6 +1,6 @@
+import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 import { Button } from '../components/Button'
-import { Step6FairModeHUD } from '../steps/Step6FairModeHUD'
 import type { FairProfile } from '../wizard/types'
 import { useWizard } from '../wizard/WizardContext'
 
@@ -11,22 +11,27 @@ function readyFairs(fairProfiles: FairProfile[]): FairProfile[] {
   )
 }
 
-/** Home's live "today" view - the actual Fair Mode HUD for whichever fair is active, or a prompt to start one. */
+/**
+ * Home's "Fair day" tab - a prompt to start a fair, or the ready-to-start
+ * list. The live HUD itself lives at /fair-day (its own page, like Details/
+ * Matches/Briefs), so a fair that's already active just bounces there
+ * instead of rendering inline.
+ */
 export function FairDay() {
   const { state, dispatch } = useWizard()
+  const router = useRouter()
   const liveFair = state.fairProfiles.find((fair) => fair.fairMode.active)
 
   // Step6FairModeHUD reads the wizard's active fair, not a fair passed
-  // directly to it - make sure they agree before it renders.
+  // directly to it - make sure they agree before sending the visitor there.
   useEffect(() => {
-    if (liveFair && state.activeFairId !== liveFair.id) {
+    if (!liveFair) return
+    if (state.activeFairId !== liveFair.id) {
       dispatch({ type: 'SET_ACTIVE_FAIR', id: liveFair.id })
+      return
     }
-  }, [liveFair, state.activeFairId, dispatch])
-
-  if (liveFair && state.activeFairId === liveFair.id) {
-    return <Step6FairModeHUD />
-  }
+    router.push('/fair-day')
+  }, [liveFair, state.activeFairId, dispatch, router])
 
   const ready = readyFairs(state.fairProfiles)
 
@@ -54,6 +59,7 @@ export function FairDay() {
                   onClick={() => {
                     dispatch({ type: 'SET_ACTIVE_FAIR', id: fair.id })
                     dispatch({ type: 'ENTER_FAIR_MODE' })
+                    router.push('/fair-day')
                   }}
                 >
                   Start fair mode
