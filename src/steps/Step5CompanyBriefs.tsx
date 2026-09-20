@@ -168,7 +168,15 @@ export function Step5CompanyBriefs() {
 
       drag.lastClient = moveEvent.clientY
       const delta = moveEvent.clientY - drag.start
-      draggedRow.style.transform = `translateY(${delta}px)`
+
+      // Clamp to the range the chips themselves occupy - the row's natural
+      // (untransformed) top plus delta can't go above the first chip or
+      // below the last one.
+      const natural = naturalRect(draggedRow)
+      const bounds = container.getBoundingClientRect()
+      const desiredTop = natural.top + delta
+      const clampedTop = Math.min(Math.max(desiredTop, bounds.top), bounds.bottom - natural.height)
+      draggedRow.style.transform = `translateY(${clampedTop - natural.top}px)`
 
       const rows = Array.from(container.children) as HTMLDivElement[]
       const myRect = draggedRow.getBoundingClientRect()
