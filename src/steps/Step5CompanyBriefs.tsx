@@ -1,11 +1,10 @@
 import {
-  ArrowDown,
-  ArrowUp,
   Briefcase,
   Buildings,
   ChatCircleDots,
   Check,
   Copy,
+  DotsSixVertical,
   GraduationCap,
   Heart,
   Lightbulb,
@@ -13,7 +12,7 @@ import {
   Tag,
 } from '@phosphor-icons/react'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import { BoothNumbers } from '../components/BoothNumbers'
 import { Button } from '../components/Button'
 import { FairSubNav } from '../components/FairSubNav'
@@ -71,6 +70,102 @@ export function Step5CompanyBriefs() {
   const activeCompany = selectedCompanies.find((c) => c.id === activeId) ?? selectedCompanies[0]
   const activePrep = activeCompany ? prep[activeCompany.id] : undefined
 
+  // Drag-to-reorder for the queue below: a dedicated handle (not the whole
+  // chip, which already selects the active company on click) drives it via
+  // Pointer Events, so it works the same on touch and mouse without any new
+  // dependency. The container is a horizontal scroller on mobile and a
+  // vertical list on desktop (md:flex-col) - `axis` is read from the
+  // container's actual computed flex-direction at drag start so the same
+  // logic drives both.
+  const listRef = useRef<HTMLDivElement>(null)
+  const rowRefs = useRef(new Map<string, HTMLDivElement>())
+  const dragRef = useRef<{ id: string; axis: 'x' | 'y'; start: number; pointerId: number } | null>(null)
+  const flipSnapshotRef = useRef<Map<string, DOMRect> | null>(null)
+
+  useLayoutEffect(() => {
+    const snapshot = flipSnapshotRef.current
+    if (!snapshot) return
+    flipSnapshotRef.current = null
+    snapshot.forEach((before, id) => {
+      const el = rowRefs.current.get(id)
+      if (!el) return
+      const after = el.getBoundingClientRect()
+      const dx = before.left - after.left
+      const dy = before.top - after.top
+      if (dx === 0 && dy === 0) return
+      el.style.transition = 'none'
+      el.style.transform = `translate(${dx}px, ${dy}px)`
+      requestAnimationFrame(() => {
+        el.style.transition = ''
+        el.style.transform = ''
+      })
+    })
+  })
+
+  const moveSelectedCompany = (id: string, delta: number) => {
+    const from = selectedCompanyIds.indexOf(id)
+    if (from === -1) return
+    dispatch({ type: 'REORDER_SELECTED_COMPANY', id, toIndex: from + delta })
+  }
+
+  const handlePointerDown = (id: string) => (event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (event.button !== 0) return
+    const container = listRef.current
+    if (!container) return
+    const axis = getComputedStyle(container).flexDirection === 'column' ? 'y' : 'x'
+    dragRef.current = { id, axis, start: axis === 'y' ? event.clientY : event.clientX, pointerId: event.pointerId }
+    event.currentTarget.setPointerCapture(event.pointerId)
+    const row = rowRefs.current.get(id)
+    if (row) row.style.zIndex = '10'
+    event.preventDefault()
+  }
+
+  const handlePointerMove = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    const drag = dragRef.current
+    if (!drag || drag.pointerId !== event.pointerId) return
+    const row = rowRefs.current.get(drag.id)
+    const container = listRef.current
+    if (!row || !container) return
+
+    const client = drag.axis === 'y' ? event.clientY : event.clientX
+    const delta = client - drag.start
+    row.style.transform = drag.axis === 'y' ? `translateY(${delta}px)` : `translateX(${delta}px)`
+
+    const rows = Array.from(container.children) as HTMLDivElement[]
+    const myIndex = rows.findIndex((el) => el.dataset.companyId === drag.id)
+    const myRect = row.getBoundingClientRect()
+    const myMid = drag.axis === 'y' ? myRect.top + myRect.height / 2 : myRect.left + myRect.width / 2
+
+    for (let i = 0; i < rows.length; i++) {
+      const other = rows[i]
+      if (other.dataset.companyId === drag.id) continue
+      const rect = other.getBoundingClientRect()
+      const mid = drag.axis === 'y' ? rect.top + rect.height / 2 : rect.left + rect.width / 2
+      const crossed = (i < myIndex && myMid < mid) || (i > myIndex && myMid > mid)
+      if (!crossed) continue
+
+      const before = new Map<string, DOMRect>()
+      rows.forEach((el) => {
+        const cid = el.dataset.companyId
+        if (cid && cid !== drag.id) before.set(cid, el.getBoundingClientRect())
+      })
+      flipSnapshotRef.current = before
+      dispatch({ type: 'REORDER_SELECTED_COMPANY', id: drag.id, toIndex: i })
+      break
+    }
+  }
+
+  const handlePointerUp = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    const drag = dragRef.current
+    if (!drag || drag.pointerId !== event.pointerId) return
+    const row = rowRefs.current.get(drag.id)
+    if (row) {
+      row.style.transform = ''
+      row.style.zIndex = ''
+    }
+    dragRef.current = null
+  }
+
   return (
     <>
       <Header title="Briefs &amp; pitch prep" onBack={() => router.push('/matches')} />
@@ -88,6 +183,7 @@ export function Step5CompanyBriefs() {
 
         <div className="md:grid md:grid-cols-[220px_1fr] md:gap-6">
           <div
+            ref={listRef}
             className="mb-5 -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 md:mb-0 md:mx-0 md:flex-col md:overflow-visible md:px-0 md:pb-0"
             role="tablist"
             aria-label="Selected companies"
@@ -95,7 +191,15 @@ export function Step5CompanyBriefs() {
             {selectedCompanies.map((company, index) => {
               const selected = company.id === activeCompany?.id
               return (
-                <div key={company.id} className="flex shrink-0 items-center gap-1.5 md:w-full">
+                <div
+                  key={company.id}
+                  ref={(el) => {
+                    if (el) rowRefs.current.set(company.id, el)
+                    else rowRefs.current.delete(company.id)
+                  }}
+                  data-company-id={company.id}
+                  className="flex shrink-0 items-center gap-1 md:w-full"
+                >
                   <button
                     type="button"
                     role="tab"
@@ -111,26 +215,27 @@ export function Step5CompanyBriefs() {
                     <span className="mr-1.5 opacity-70">{index + 1}.</span>
                     {company.companyName || 'Unlisted company'}
                   </button>
-                  <div className="flex shrink-0 flex-col gap-0.5">
-                    <button
-                      type="button"
-                      aria-label={`Move ${company.companyName || 'company'} up`}
-                      disabled={index === 0}
-                      onClick={() => dispatch({ type: 'MOVE_SELECTED_COMPANY', id: company.id, direction: 'up' })}
-                      className="flex h-4 w-6 cursor-pointer items-center justify-center rounded text-muted-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    >
-                      <ArrowUp size={12} weight="bold" aria-hidden="true" />
-                    </button>
-                    <button
-                      type="button"
-                      aria-label={`Move ${company.companyName || 'company'} down`}
-                      disabled={index === selectedCompanies.length - 1}
-                      onClick={() => dispatch({ type: 'MOVE_SELECTED_COMPANY', id: company.id, direction: 'down' })}
-                      className="flex h-4 w-6 cursor-pointer items-center justify-center rounded text-muted-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    >
-                      <ArrowDown size={12} weight="bold" aria-hidden="true" />
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    aria-label={`Reorder ${company.companyName || 'company'} - drag, or use arrow keys`}
+                    onPointerDown={handlePointerDown(company.id)}
+                    onPointerMove={handlePointerMove}
+                    onPointerUp={handlePointerUp}
+                    onPointerCancel={handlePointerUp}
+                    onKeyDown={(event) => {
+                      if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') {
+                        event.preventDefault()
+                        moveSelectedCompany(company.id, -1)
+                      } else if (event.key === 'ArrowDown' || event.key === 'ArrowRight') {
+                        event.preventDefault()
+                        moveSelectedCompany(company.id, 1)
+                      }
+                    }}
+                    style={{ touchAction: 'none' }}
+                    className="flex h-9 w-7 shrink-0 cursor-grab items-center justify-center rounded-lg text-muted-foreground hover:bg-muted active:cursor-grabbing focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <DotsSixVertical size={16} weight="bold" aria-hidden="true" />
+                  </button>
                 </div>
               )
             })}

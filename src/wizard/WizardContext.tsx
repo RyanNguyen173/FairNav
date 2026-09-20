@@ -57,7 +57,7 @@ type Action =
   | { type: 'FAIR_ANALYSIS_FAILED' }
   | { type: 'COMPANIES_MATCHED'; companies: Company[] }
   | { type: 'TOGGLE_COMPANY_SELECTION'; id: string }
-  | { type: 'MOVE_SELECTED_COMPANY'; id: string; direction: 'up' | 'down' }
+  | { type: 'REORDER_SELECTED_COMPANY'; id: string; toIndex: number }
   | { type: 'PREP_GENERATED'; prep: Record<string, CompanyPrep> }
   | { type: 'ENTER_FAIR_MODE' }
   | { type: 'EXIT_FAIR_MODE' }
@@ -312,15 +312,17 @@ function reducer(state: WizardState, action: Action): WizardState {
       }))
     }
 
-    case 'MOVE_SELECTED_COMPANY': {
+    case 'REORDER_SELECTED_COMPANY': {
       const activeFair = getActiveFair(state)
       if (!activeFair) return state
       const ids = activeFair.selectedCompanyIds
       const from = ids.indexOf(action.id)
-      const to = action.direction === 'up' ? from - 1 : from + 1
-      if (from === -1 || to < 0 || to >= ids.length) return state
+      if (from === -1) return state
+      const toIndex = Math.max(0, Math.min(action.toIndex, ids.length - 1))
+      if (from === toIndex) return state
       const reordered = [...ids]
-      ;[reordered[from], reordered[to]] = [reordered[to], reordered[from]]
+      const [moved] = reordered.splice(from, 1)
+      reordered.splice(toIndex, 0, moved)
       return updateActiveFair(state, (fair) => ({ ...fair, selectedCompanyIds: reordered }))
     }
 
