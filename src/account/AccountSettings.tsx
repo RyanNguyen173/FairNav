@@ -57,6 +57,7 @@ function ResumeSection() {
               status={resume.status === 'working' ? 'working' : 'idle'}
               workingText="Parsing your resume…"
               onFile={handleFile}
+              onRemove={() => dispatch({ type: 'REMOVE_RESUME' })}
             />
           </div>
 

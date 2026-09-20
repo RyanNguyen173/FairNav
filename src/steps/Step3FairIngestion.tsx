@@ -8,21 +8,64 @@ import { UploadDropzone } from '../components/UploadDropzone'
 import { analyzeFair } from '../wizard/aiEngine'
 import { useActiveFair, useWizard } from '../wizard/WizardContext'
 
+/** Identifies exactly what was last sent to the AI, so re-uploading/re-clicking the same input skips a redundant call. */
+function fileSignature(file: File): string {
+  return `file:${file.name}:${file.size}:${file.lastModified}`
+}
+function textSignature(text: string): string {
+  return `text:${text.trim()}`
+}
+
 export function Step3FairIngestion() {
   const { state, dispatch } = useWizard()
   const router = useRouter()
   const { profile } = state
   const fair = useActiveFair()
-  const [directoryMode, setDirectoryMode] = useState<'paste' | 'upload'>('paste')
+  const [directoryMode, setDirectoryMode] = useState<'paste' | 'upload'>('upload')
   const [companyListFile, setCompanyListFile] = useState<File | null>(null)
+  // Best-effort: if this fair already has matched companies on mount, assume
+  // they came from the current pasted text (a real File object can't be
+  // restored across a reload, so upload mode always re-analyzes on its next
+  // drop regardless).
+  const [analyzedSignature, setAnalyzedSignature] = useState<string | null>(() =>
+    fair.companies.length > 0 ? textSignature(fair.companyDirectoryText) : null,
+  )
 
   const canAnalyze = fair.name.trim().length > 0 && fair.ingestStatus !== 'working'
+  const hasResults = fair.companies.length > 0
+  // Matches analyzeFair's own precedence (a file, when present, always wins
+  // over pasted text) - so "already analyzed" reflects whichever one it
+  // would actually use right now, regardless of which tab is showing.
+  const currentSignature = companyListFile
+    ? fileSignature(companyListFile)
+    : textSignature(fair.companyDirectoryText)
+  const isCurrentAnalyzed = hasResults && analyzedSignature === currentSignature
 
-  const handleAnalyze = async () => {
+  const runAnalysis = async (file: File | null, text: string) => {
+    const signature = file ? fileSignature(file) : textSignature(text)
+    if (signature === analyzedSignature && hasResults) return
+    setAnalyzedSignature(signature)
     dispatch({ type: 'FAIR_ANALYZING' })
-    const companies = await analyzeFair(fair.companyDirectoryText, companyListFile, profile)
+    const companies = await analyzeFair(text, file, profile)
     dispatch({ type: 'COMPANIES_MATCHED', companies })
+  }
+
+  const handleAnalyzeClick = async () => {
+    if (!isCurrentAnalyzed) await runAnalysis(companyListFile, fair.companyDirectoryText)
     router.push('/matches')
+  }
+
+  const handleFileUpload = (file: File) => {
+    setCompanyListFile(file)
+    dispatch({ type: 'SET_COMPANY_LIST_FILE', fileName: file.name })
+    // The moment a directory file lands, analysis starts - no separate click needed.
+    void runAnalysis(file, fair.companyDirectoryText)
+  }
+
+  const handleFileRemove = () => {
+    setCompanyListFile(null)
+    setAnalyzedSignature(null)
+    dispatch({ type: 'REMOVE_COMPANY_LIST_FILE' })
   }
 
   return (
@@ -31,8 +74,8 @@ export function Step3FairIngestion() {
       <FairSubNav fair={fair} />
       <StepShell
         footer={
-          <Button fullWidth disabled={!canAnalyze} loading={fair.ingestStatus === 'working'} onClick={handleAnalyze}>
-            Analyze Fair &amp; Match Companies
+          <Button fullWidth disabled={!canAnalyze} loading={fair.ingestStatus === 'working'} onClick={handleAnalyzeClick}>
+            {isCurrentAnalyzed ? 'Continue to Matches' : 'Analyze Fair & Match Companies'}
           </Button>
         }
       >
@@ -78,6 +121,7 @@ export function Step3FairIngestion() {
               accept="image/*,.pdf"
               fileName={fair.mapFileName}
               onFile={(file) => dispatch({ type: 'SET_MAP_FILE', fileName: file.name })}
+              onRemove={() => dispatch({ type: 'REMOVE_MAP_FILE' })}
             />
           </div>
 
@@ -117,10 +161,10 @@ export function Step3FairIngestion() {
                 helperText="PDF or CSV listing attending companies."
                 accept=".pdf,.csv"
                 fileName={fair.companyListFileName}
-                onFile={(file) => {
-                  setCompanyListFile(file)
-                  dispatch({ type: 'SET_COMPANY_LIST_FILE', fileName: file.name })
-                }}
+                status={fair.ingestStatus === 'working' ? 'working' : 'idle'}
+                workingText="Analyzing companies…"
+                onFile={handleFileUpload}
+                onRemove={handleFileRemove}
               />
             )}
 

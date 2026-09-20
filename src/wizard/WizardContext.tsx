@@ -49,7 +49,10 @@ type Action =
   | { type: 'REMOVE_FAIR_PROFILE'; id: string }
   | { type: 'SET_FAIR_FIELD'; field: 'name' | 'date' | 'location'; value: string }
   | { type: 'SET_MAP_FILE'; fileName: string }
+  | { type: 'REMOVE_MAP_FILE' }
   | { type: 'SET_COMPANY_LIST_FILE'; fileName: string }
+  | { type: 'REMOVE_COMPANY_LIST_FILE' }
+  | { type: 'REMOVE_RESUME' }
   | { type: 'SET_COMPANY_DIRECTORY_TEXT'; value: string }
   | { type: 'FAIR_ANALYZING' }
   | { type: 'COMPANIES_MATCHED'; companies: Company[] }
@@ -99,6 +102,20 @@ function reducer(state: WizardState, action: Action): WizardState {
           interests: action.interests,
           experience: action.experience,
           education: action.education,
+        },
+      }
+    case 'REMOVE_RESUME':
+      // Only the file/extraction fields reset - profile.skills/interests/
+      // experience/education stay put, since the student may have edited
+      // them independently of what the resume produced.
+      return {
+        ...state,
+        resume: {
+          ...state.resume,
+          fileName: null,
+          status: 'idle',
+          contact: { fullName: '', email: '', phone: '', university: '' },
+          extractedSkills: [],
         },
       }
     case 'SET_TARGET_POSITION':
@@ -247,17 +264,39 @@ function reducer(state: WizardState, action: Action): WizardState {
       return updateActiveFair(state, (fair) => ({ ...fair, [action.field]: action.value }))
     case 'SET_MAP_FILE':
       return updateActiveFair(state, (fair) => ({ ...fair, mapFileName: action.fileName }))
+    case 'REMOVE_MAP_FILE':
+      return updateActiveFair(state, (fair) => ({ ...fair, mapFileName: null }))
     case 'SET_COMPANY_LIST_FILE':
       return updateActiveFair(state, (fair) => ({ ...fair, companyListFileName: action.fileName }))
+    case 'REMOVE_COMPANY_LIST_FILE':
+      // The directory that produced these companies is gone - matches,
+      // selections, prep, and fair-mode progress no longer correspond to
+      // anything real, so they reset along with the file itself.
+      return updateActiveFair(state, (fair) => ({
+        ...fair,
+        companyListFileName: null,
+        ingestStatus: 'idle',
+        companies: [],
+        selectedCompanyIds: [],
+        prep: {},
+        fairMode: { active: false, startedAt: null, companyState: {} },
+      }))
     case 'SET_COMPANY_DIRECTORY_TEXT':
       return updateActiveFair(state, (fair) => ({ ...fair, companyDirectoryText: action.value }))
     case 'FAIR_ANALYZING':
       return updateActiveFair(state, (fair) => ({ ...fair, ingestStatus: 'working' }))
     case 'COMPANIES_MATCHED':
+      // A fresh match result means whatever was selected/prepped/visited
+      // against the OLD company list no longer corresponds to anything -
+      // reset it rather than leave stale references to companies that may
+      // no longer exist.
       return updateActiveFair(state, (fair) => ({
         ...fair,
         ingestStatus: 'done',
         companies: action.companies,
+        selectedCompanyIds: [],
+        prep: {},
+        fairMode: { active: false, startedAt: null, companyState: {} },
       }))
 
     case 'TOGGLE_COMPANY_SELECTION': {
