@@ -193,6 +193,10 @@ export function Step6FairModeHUD() {
   // just steps over to Briefs and leaves fair mode running underneath.
   const exitFairMode = () => {
     dispatch({ type: 'EXIT_FAIR_MODE' })
+    // Home's own tab default only looks at whether a fair is live, which is
+    // false the instant we exit - flag which tab to land on so Home doesn't
+    // fall back to the fair board instead of the Fair Day home menu.
+    sessionStorage.setItem('fairnav-home-tab', 'day')
     router.push('/')
   }
   const backToDashboard = () => router.push('/briefs')

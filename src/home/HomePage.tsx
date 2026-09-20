@@ -17,8 +17,18 @@ const TABS: { value: Tab; label: string }[] = [
 /** Landing page after sign-in: account menu, and Fair Board / Fair Day tabs. */
 export function HomePage() {
   const { state } = useWizard()
-  // Land on Fair Day automatically if you're returning mid-fair.
-  const [tab, setTab] = useState<Tab>(() => (state.fairProfiles.some((fair) => fair.fairMode.active) ? 'day' : 'board'))
+  // Land on Fair Day automatically if you're returning mid-fair, or if
+  // Fair Day's own exit arrow asked to land there (see Step6FairModeHUD).
+  const [tab, setTab] = useState<Tab>(() => {
+    if (typeof window !== 'undefined') {
+      const requestedTab = sessionStorage.getItem('fairnav-home-tab')
+      if (requestedTab === 'day' || requestedTab === 'board') {
+        sessionStorage.removeItem('fairnav-home-tab')
+        return requestedTab
+      }
+    }
+    return state.fairProfiles.some((fair) => fair.fairMode.active) ? 'day' : 'board'
+  })
   const tabRefs = useRef<Partial<Record<Tab, HTMLButtonElement>>>({})
   const [indicator, setIndicator] = useState({ x: 0, width: 0 })
 
