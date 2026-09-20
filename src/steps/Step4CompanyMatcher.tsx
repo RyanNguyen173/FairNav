@@ -159,7 +159,7 @@ export function Step4CompanyMatcher() {
             ) : (
               <ul className="mb-4 space-y-2">
                 {selectedCompanies.map((company) => (
-                  <li key={company.id} className="flex items-center gap-2 text-sm text-card-foreground">
+                  <li key={company.id} className="flex flex-wrap items-center gap-2 text-sm text-card-foreground">
                     <CheckCircle size={15} weight="fill" className="shrink-0 text-primary" aria-hidden="true" />
                     <span className="min-w-0 truncate">{company.companyName || 'Unlisted company'}</span>
                     <BoothNumbers boothNumbers={company.boothNumbers} compact />

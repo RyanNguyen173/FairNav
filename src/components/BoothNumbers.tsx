@@ -14,7 +14,13 @@ export function BoothNumbers({ boothNumbers, compact = false }: { boothNumbers: 
   const [expanded, setExpanded] = useState(false)
   const Tag = compact ? 'span' : 'p'
   const wrapperClass = compact
-    ? 'ml-auto flex shrink-0 flex-wrap items-center justify-end gap-1 text-xs text-muted-foreground'
+    ? [
+        'flex items-center gap-1 text-xs text-muted-foreground',
+        // Collapsed: sits flush-right next to the name on the same line. A
+        // fully expanded list can be long, so it drops to its own full-width
+        // line instead of colliding with the name (shrink-0 wouldn't budge).
+        expanded ? 'w-full basis-full flex-wrap' : 'ml-auto shrink-0 flex-wrap justify-end',
+      ].join(' ')
     : 'mb-2 flex flex-wrap items-center gap-1 text-xs text-muted-foreground'
 
   if (boothNumbers.length === 0) {

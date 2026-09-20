@@ -1,6 +1,6 @@
-import { Buildings, Copy, PencilSimple, Plus, Trash } from '@phosphor-icons/react'
+import { Buildings, Copy, DotsThree, PencilSimple, Plus, Trash } from '@phosphor-icons/react'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Button } from '../components/Button'
 import { Modal } from '../components/Modal'
 import { FieldLabel, TextInput } from '../components/StepShell'
@@ -135,6 +135,75 @@ function CreateFairModal({
   )
 }
 
+/** Top-right "..." menu on a fair card: Duplicate + Delete, same open/close pattern as AccountMenu. */
+function FairCardMenu({ label, onDuplicate, onDelete }: { label: string; onDuplicate: () => void; onDelete: () => void }) {
+  const [open, setOpen] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const handlePointerDown = (event: PointerEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) setOpen(false)
+    }
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpen(false)
+    }
+    window.addEventListener('pointerdown', handlePointerDown)
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      window.removeEventListener('pointerdown', handlePointerDown)
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [open])
+
+  return (
+    <div ref={containerRef} className="relative shrink-0">
+      <button
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={`More actions for ${label}`}
+        className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-muted-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <DotsThree size={18} weight="bold" aria-hidden="true" />
+      </button>
+
+      {open && (
+        <div
+          role="menu"
+          className="absolute right-0 top-9 z-30 w-40 overflow-hidden rounded-xl border border-border bg-card py-1 shadow-soft"
+        >
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              setOpen(false)
+              onDuplicate()
+            }}
+            className="flex w-full cursor-pointer items-center gap-2 px-3.5 py-2.5 text-left text-sm text-card-foreground hover:bg-muted"
+          >
+            <Copy size={15} weight="bold" aria-hidden="true" />
+            Duplicate
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              setOpen(false)
+              onDelete()
+            }}
+            className="flex w-full cursor-pointer items-center gap-2 px-3.5 py-2.5 text-left text-sm text-destructive hover:bg-muted"
+          >
+            <Trash size={15} weight="bold" aria-hidden="true" />
+            Delete
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function FairCard({ fair }: { fair: FairProfile }) {
   const { dispatch } = useWizard()
   const router = useRouter()
@@ -167,7 +236,10 @@ function FairCard({ fair }: { fair: FairProfile }) {
         >
           {fair.name || 'Untitled fair'}
         </div>
-        <span className={[TAG_CLASS, 'shrink-0', STATUS_CLASS[status]].join(' ')}>{STATUS_LABEL[status]}</span>
+        <div className="flex shrink-0 items-center gap-1.5">
+          <span className={[TAG_CLASS, STATUS_CLASS[status]].join(' ')}>{STATUS_LABEL[status]}</span>
+          <FairCardMenu label={fair.name || 'this fair'} onDuplicate={handleDuplicate} onDelete={handleDelete} />
+        </div>
       </div>
 
       {fair.date ? (
@@ -194,30 +266,10 @@ function FairCard({ fair }: { fair: FairProfile }) {
         </span>
       </div>
 
-      <div className="mt-0.5 flex flex-col gap-2">
+      <div className="mt-0.5">
         <Button variant="secondary" fullWidth icon={<PencilSimple size={15} weight="bold" aria-hidden="true" />} onClick={handleEdit}>
           Edit
         </Button>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={handleDuplicate}
-            aria-label={`Duplicate ${fair.name || 'this fair'}`}
-            className="flex h-9 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-lg text-sm font-medium text-muted-foreground shadow-hairline transition-[background-color,color] duration-150 hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.97]"
-          >
-            <Copy size={14} weight="bold" aria-hidden="true" />
-            Duplicate
-          </button>
-          <button
-            type="button"
-            onClick={handleDelete}
-            aria-label={`Delete ${fair.name || 'this fair'}`}
-            className="flex h-9 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-lg text-sm font-medium text-muted-foreground shadow-hairline transition-[background-color,color] duration-150 hover:bg-muted hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.97]"
-          >
-            <Trash size={14} weight="bold" aria-hidden="true" />
-            Delete
-          </button>
-        </div>
       </div>
     </div>
   )
