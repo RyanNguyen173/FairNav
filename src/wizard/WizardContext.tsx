@@ -49,6 +49,7 @@ type Action =
   | { type: 'DUPLICATE_FAIR_PROFILE'; id: string }
   | { type: 'REMOVE_FAIR_PROFILE'; id: string }
   | { type: 'SET_FAIR_FIELD'; field: 'name' | 'date' | 'location'; value: string }
+  | { type: 'SET_FAIR_TARGET_POSITION'; position: TargetPosition }
   | { type: 'SET_COMPANY_LIST_FILE'; fileName: string }
   | { type: 'REMOVE_COMPANY_LIST_FILE' }
   | { type: 'REMOVE_RESUME' }
@@ -265,6 +266,8 @@ function reducer(state: WizardState, action: Action): WizardState {
 
     case 'SET_FAIR_FIELD':
       return updateActiveFair(state, (fair) => ({ ...fair, [action.field]: action.value }))
+    case 'SET_FAIR_TARGET_POSITION':
+      return updateActiveFair(state, (fair) => ({ ...fair, targetPosition: action.position }))
     case 'SET_COMPANY_LIST_FILE':
       return updateActiveFair(state, (fair) => ({ ...fair, companyListFileName: action.fileName }))
     case 'REMOVE_COMPANY_LIST_FILE':

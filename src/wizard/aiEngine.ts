@@ -1,4 +1,4 @@
-import type { Booth, Company, CompanyPrep, ContactInfo, Education, ProfileData, WorkExperience } from './types'
+import type { Booth, Company, CompanyPrep, ContactInfo, Education, ProfileData, TargetPosition, WorkExperience } from './types'
 
 /**
  * AI-backed resume parsing / directory parsing / company ranking / pitch
@@ -119,6 +119,7 @@ export async function analyzeFair(
   rawText: string,
   companyListFile: File | null,
   profile: ProfileData,
+  targetPosition: TargetPosition,
 ): Promise<Company[]> {
   const file = companyListFile
     ? { mimeType: companyListFile.type, dataBase64: await fileToBase64(companyListFile) }
@@ -129,6 +130,7 @@ export async function analyzeFair(
   const { rankedCompanies } = await callApi<{ rankedCompanies: RankedCompanyResult[] }>('/api/rank-companies', {
     profile,
     companies: merged,
+    targetPosition,
   })
 
   // Every company we know is real (from `merged`) gets a card - if the
@@ -166,6 +168,7 @@ type PitchResult = CompanyPrep & { companyName: string }
 export async function generatePreps(
   profile: ProfileData,
   companies: Company[],
+  targetPosition: TargetPosition,
 ): Promise<Record<string, CompanyPrep>> {
   const { pitches } = await callApi<{ pitches: PitchResult[] }>('/api/generate-pitches', {
     profile,
@@ -176,6 +179,7 @@ export async function generatePreps(
       industry,
       openRoles,
     })),
+    targetPosition,
   })
 
   const prep: Record<string, CompanyPrep> = {}

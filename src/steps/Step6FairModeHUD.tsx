@@ -54,7 +54,7 @@ function CompanyResearch({ prep }: { prep: CompanyPrep }) {
       <ResearchList icon={Heart} label="Company values" items={prep.values} />
       <ResearchList icon={Tag} label="Industries" items={prep.industries} />
       <ResearchList icon={GraduationCap} label="Majors they hire" items={prep.majors} />
-      <ResearchList icon={Briefcase} label="Open positions" items={prep.positions} />
+      <ResearchList icon={Briefcase} label="Possible positions" items={prep.positions} />
       <SectionCard>
         <h4 className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-foreground">
           <Lightbulb size={14} weight="fill" className="text-accent-ink" aria-hidden="true" />

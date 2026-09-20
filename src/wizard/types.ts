@@ -1,5 +1,16 @@
-export type TargetPosition = 'internship' | 'fulltime'
+export type TargetPosition = 'internship' | 'fulltime' | 'both'
 export type AsyncStatus = 'idle' | 'working' | 'done'
+
+export function targetPositionLabel(position: TargetPosition): string {
+  switch (position) {
+    case 'internship':
+      return 'Internship'
+    case 'fulltime':
+      return 'Full-Time'
+    case 'both':
+      return 'Internship & Full-Time'
+  }
+}
 
 export interface ContactInfo {
   fullName: string

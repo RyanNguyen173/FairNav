@@ -1,3 +1,4 @@
+import { Briefcase, GraduationCap, Stack } from '@phosphor-icons/react'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { Button } from '../components/Button'
@@ -6,7 +7,14 @@ import { Header } from '../components/Header'
 import { FieldLabel, SectionCard, StepShell, TextInput } from '../components/StepShell'
 import { UploadDropzone } from '../components/UploadDropzone'
 import { analyzeFair } from '../wizard/aiEngine'
+import type { TargetPosition } from '../wizard/types'
 import { useActiveFair, useWizard } from '../wizard/WizardContext'
+
+const POSITION_OPTIONS: { value: TargetPosition; label: string; icon: typeof GraduationCap }[] = [
+  { value: 'internship', label: 'Internship', icon: GraduationCap },
+  { value: 'fulltime', label: 'Full-Time', icon: Briefcase },
+  { value: 'both', label: 'Both', icon: Stack },
+]
 
 /** Identifies exactly what was last sent to the AI, so re-uploading/re-clicking the same input skips a redundant call. */
 function fileSignature(file: File): string {
@@ -32,10 +40,9 @@ export function Step3FairIngestion() {
     fair.companies.length > 0 ? textSignature(fair.companyDirectoryText) : null,
   )
 
-  // The AI needs real exhibitor data - never let it run (or let Matches be
-  // reached) against a blank directory.
+  // The AI needs real exhibitor data - never let it run against a blank
+  // directory.
   const hasDirectoryInput = Boolean(companyListFile) || fair.companyDirectoryText.trim().length > 0
-  const canAnalyze = fair.name.trim().length > 0 && hasDirectoryInput && fair.ingestStatus !== 'working'
   const hasResults = fair.companies.length > 0
   // Matches analyzeFair's own precedence (a file, when present, always wins
   // over pasted text) - so "already analyzed" reflects whichever one it
@@ -44,6 +51,11 @@ export function Step3FairIngestion() {
     ? fileSignature(companyListFile)
     : textSignature(fair.companyDirectoryText)
   const isCurrentAnalyzed = hasResults && analyzedSignature === currentSignature
+  // Once a directory has already been analyzed, continuing onward shouldn't
+  // require re-supplying the input - a reload can't restore the uploaded
+  // File object even though the fair's matched companies (and thus
+  // isCurrentAnalyzed) survive it just fine.
+  const canAnalyze = fair.name.trim().length > 0 && (hasDirectoryInput || isCurrentAnalyzed) && fair.ingestStatus !== 'working'
 
   /** Returns whether the given input now has valid, analyzed results behind it. */
   const runAnalysis = async (file: File | null, text: string): Promise<boolean> => {
@@ -53,7 +65,7 @@ export function Step3FairIngestion() {
     setAnalyzedSignature(signature)
     dispatch({ type: 'FAIR_ANALYZING' })
     try {
-      const companies = await analyzeFair(text, file, profile)
+      const companies = await analyzeFair(text, file, profile, fair.targetPosition)
       dispatch({ type: 'COMPANIES_MATCHED', companies })
       return true
     } catch (error) {
@@ -128,6 +140,37 @@ export function Step3FairIngestion() {
                   placeholder="e.g. Seattle Convention Center"
                   onChange={(event) => dispatch({ type: 'SET_FAIR_FIELD', field: 'location', value: event.target.value })}
                 />
+              </div>
+              <div>
+                <FieldLabel htmlFor="target-position">Target position</FieldLabel>
+                <div
+                  id="target-position"
+                  role="radiogroup"
+                  aria-label="Target position"
+                  className="grid grid-cols-3 gap-2 rounded-xl bg-muted p-1"
+                >
+                  {POSITION_OPTIONS.map(({ value, label, icon: Icon }) => {
+                    const selected = fair.targetPosition === value
+                    return (
+                      <button
+                        key={value}
+                        type="button"
+                        role="radio"
+                        aria-checked={selected}
+                        onClick={() => dispatch({ type: 'SET_FAIR_TARGET_POSITION', position: value })}
+                        className={[
+                          'flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-lg text-sm font-semibold',
+                          'transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                          selected ? 'bg-card text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground',
+                        ].join(' ')}
+                      >
+                        <Icon size={16} weight={selected ? 'fill' : 'regular'} aria-hidden="true" />
+                        {label}
+                      </button>
+                    )
+                  })}
+                </div>
+                <p className="mt-1.5 text-xs text-muted-foreground">Used to rank companies and roles that fit what you're looking for.</p>
               </div>
             </SectionCard>
           </div>

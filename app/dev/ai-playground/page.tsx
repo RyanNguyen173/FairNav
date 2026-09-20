@@ -12,7 +12,7 @@ import {
   type MergedCompanyInput,
   type PitchCompanyInput,
 } from '../../../src/lib/aiPrompts'
-import type { ProfileData } from '../../../src/wizard/types'
+import type { ProfileData, TargetPosition } from '../../../src/wizard/types'
 
 type Tab = 'rank' | 'pitches'
 type ThinkingLevelChoice = '' | 'MINIMAL' | 'LOW' | 'MEDIUM' | 'HIGH'
@@ -73,6 +73,8 @@ const DEFAULT_PITCH_COMPANIES: PitchCompanyInput[] = [
     openRoles: ['Software Engineer Intern'],
   },
 ]
+
+const DEFAULT_TARGET_POSITION: TargetPosition = 'both'
 
 const DEFAULT_PARAMS: ParamsState = {
   model: 'gemini-3.5-flash-lite',
@@ -219,13 +221,14 @@ export default function AiPlaygroundPage() {
   const [tab, setTab] = useState<Tab>('rank')
 
   const [profileForm, setProfileForm] = useState(DEFAULT_PROFILE)
+  const [targetPosition, setTargetPosition] = useState<TargetPosition>(DEFAULT_TARGET_POSITION)
   const [rankCompaniesJson, setRankCompaniesJson] = useState(() => JSON.stringify(DEFAULT_RANK_COMPANIES, null, 2))
   const [pitchCompaniesJson, setPitchCompaniesJson] = useState(() => JSON.stringify(DEFAULT_PITCH_COMPANIES, null, 2))
   const [rankPrompt, setRankPrompt] = useState(() =>
-    buildRankCompaniesPrompt(toProfileData(DEFAULT_PROFILE), DEFAULT_RANK_COMPANIES),
+    buildRankCompaniesPrompt(toProfileData(DEFAULT_PROFILE), DEFAULT_RANK_COMPANIES, DEFAULT_TARGET_POSITION),
   )
   const [pitchPrompt, setPitchPrompt] = useState(() =>
-    buildGeneratePitchesPrompt(toProfileData(DEFAULT_PROFILE), DEFAULT_PITCH_COMPANIES),
+    buildGeneratePitchesPrompt(toProfileData(DEFAULT_PROFILE), DEFAULT_PITCH_COMPANIES, DEFAULT_TARGET_POSITION),
   )
   const [companiesError, setCompaniesError] = useState<string | null>(null)
   const [params, setParams] = useState(DEFAULT_PARAMS)
@@ -238,10 +241,10 @@ export default function AiPlaygroundPage() {
     try {
       if (tab === 'rank') {
         const companies = JSON.parse(rankCompaniesJson) as MergedCompanyInput[]
-        setRankPrompt(buildRankCompaniesPrompt(toProfileData(profileForm), companies))
+        setRankPrompt(buildRankCompaniesPrompt(toProfileData(profileForm), companies, targetPosition))
       } else {
         const companies = JSON.parse(pitchCompaniesJson) as PitchCompanyInput[]
-        setPitchPrompt(buildGeneratePitchesPrompt(toProfileData(profileForm), companies))
+        setPitchPrompt(buildGeneratePitchesPrompt(toProfileData(profileForm), companies, targetPosition))
       }
     } catch {
       setCompaniesError('Companies JSON is invalid - fix it and try rebuilding again.')
@@ -346,6 +349,19 @@ export default function AiPlaygroundPage() {
                   value={profileForm.interests}
                   onChange={(e) => setProfileForm({ ...profileForm, interests: e.target.value })}
                 />
+              </div>
+              <div>
+                <FieldLabel htmlFor="profile-target">Target position</FieldLabel>
+                <select
+                  id="profile-target"
+                  value={targetPosition}
+                  onChange={(e) => setTargetPosition(e.target.value as TargetPosition)}
+                  className="min-h-11 w-full rounded-xl border border-border bg-card px-3.5 text-[15px] text-card-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <option value="internship">Internship</option>
+                  <option value="fulltime">Full-Time</option>
+                  <option value="both">Both</option>
+                </select>
               </div>
             </div>
           </SectionCard>

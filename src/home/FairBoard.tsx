@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Button } from '../components/Button'
 import { Modal } from '../components/Modal'
 import { FieldLabel, TextInput } from '../components/StepShell'
-import type { FairProfile, FairStatus, TargetPosition } from '../wizard/types'
+import { targetPositionLabel, type FairProfile, type FairStatus, type TargetPosition } from '../wizard/types'
 import { useWizard } from '../wizard/WizardContext'
 
 const STATUS_LABEL: Record<FairStatus, string> = {
@@ -107,9 +107,9 @@ function CreateFairModal({
             id="new-fair-target"
             role="radiogroup"
             aria-label="Target position"
-            className="grid grid-cols-2 gap-2 rounded-xl bg-muted p-1"
+            className="grid grid-cols-3 gap-2 rounded-xl bg-muted p-1"
           >
-            {(['internship', 'fulltime'] as const).map((value) => (
+            {(['internship', 'fulltime', 'both'] as const).map((value) => (
               <button
                 key={value}
                 type="button"
@@ -122,7 +122,7 @@ function CreateFairModal({
                   targetPosition === value ? 'bg-card text-primary shadow-hairline' : 'text-muted-foreground hover:text-foreground',
                 ].join(' ')}
               >
-                {value === 'internship' ? 'Internship' : 'Full-Time'}
+                {value === 'both' ? 'Both' : targetPositionLabel(value)}
               </button>
             ))}
           </div>
@@ -258,7 +258,7 @@ function FairCard({ fair }: { fair: FairProfile }) {
 
       <div className="flex flex-wrap items-center gap-2.5">
         <span className={[TAG_CLASS, 'bg-accent-wash text-accent-ink'].join(' ')}>
-          {fair.targetPosition === 'internship' ? 'Internship' : 'Full-Time'}
+          {targetPositionLabel(fair.targetPosition)}
         </span>
         <span className="flex items-center gap-1 text-xs text-muted-foreground">
           <Buildings size={13} weight="fill" aria-hidden="true" />

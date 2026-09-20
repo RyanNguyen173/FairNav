@@ -1,4 +1,4 @@
-import type { Education, ProfileData, WorkExperience } from '../wizard/types'
+import { targetPositionLabel, type Education, type ProfileData, type TargetPosition, type WorkExperience } from '../wizard/types'
 
 /**
  * The prompt text for the rank-companies and generate-pitches Gemini calls,
@@ -46,7 +46,7 @@ function describeEducation(education: Education[]): string {
     .join('; ')
 }
 
-export function describeProfile(profile: ProfileData): string {
+export function describeProfile(profile: ProfileData, targetPosition: TargetPosition): string {
   return [
     `- Major: ${profile.major || 'Undeclared'}`,
     `- Graduation year: ${profile.gradYear || 'Unknown'}`,
@@ -54,6 +54,7 @@ export function describeProfile(profile: ProfileData): string {
     `- Interests: ${profile.interests.join(', ') || 'None listed'}`,
     `- Work experience: ${describeExperience(profile.experience)}`,
     `- Education: ${describeEducation(profile.education)}`,
+    `- Looking for: ${targetPositionLabel(targetPosition)}`,
   ].join('\n')
 }
 
@@ -66,8 +67,13 @@ export function formatCompanyListForRanking(companies: MergedCompanyInput[]): st
     .join('\n')
 }
 
-export function buildRankCompaniesPrompt(profile: ProfileData, companies: MergedCompanyInput[]): string {
+export function buildRankCompaniesPrompt(
+  profile: ProfileData,
+  companies: MergedCompanyInput[],
+  targetPosition: TargetPosition,
+): string {
   const companyList = formatCompanyListForRanking(companies)
+  const roleType = targetPosition === 'both' ? 'internship or full-time' : targetPositionLabel(targetPosition).toLowerCase()
 
   // The model asked to echo back companyName/boothNumbers verbatim for every
   // entry sometimes drops or blanks one on a long list - rather than trust
@@ -78,7 +84,7 @@ export function buildRankCompaniesPrompt(profile: ProfileData, companies: Merged
   return `Rank these career fair companies for a student, from best to worst fit.
 
 Student profile:
-${describeProfile(profile)}
+${describeProfile(profile, targetPosition)}
 
 Companies attending, with booth numbers:
 ${companyList}
@@ -87,7 +93,7 @@ For each and every one of the ${companies.length} companies listed above (do not
 - index: its number from the list above (1-${companies.length}).
 - summary: 2-3 sentences. First cover what the company actually does/sells/builds (a genuine company overview), then explain specifically why it would match or interest this student given their profile above.
 - industry: the single primary industry this company operates in (e.g. "Fintech", "Aerospace", "Healthcare", "Software Engineering").
-- openRoles: 1-2 plausible open roles.
+- openRoles: 1-2 plausible ${roleType} roles.
 - matchScore: 0-100 reflecting fit with this student.
 You must return exactly ${companies.length} results, one per index, with no duplicate or missing index.`
 }
@@ -101,26 +107,31 @@ export function formatCompanyListForPitches(companies: PitchCompanyInput[]): str
     .join('\n')
 }
 
-export function buildGeneratePitchesPrompt(profile: ProfileData, companies: PitchCompanyInput[]): string {
+export function buildGeneratePitchesPrompt(
+  profile: ProfileData,
+  companies: PitchCompanyInput[],
+  targetPosition: TargetPosition,
+): string {
   const companyList = formatCompanyListForPitches(companies)
+  const roleType = targetPosition === 'both' ? 'internship and/or full-time' : targetPositionLabel(targetPosition).toLowerCase()
 
-  return `A student is about to walk a career fair floor and will talk to a recruiter at each of the following companies. For EACH one, produce a personalized pitch plus a research brief, using the student's real background and your general knowledge of each company.
+  return `A student is preparing to talk to a recruiter at each of the following career fair companies. For EACH one, produce a research brief - explaining the company's fit for this specific student and giving them background to research it - using the student's real background and your general knowledge of each company.
 
 Student profile:
-${describeProfile(profile)}
+${describeProfile(profile, targetPosition)}
 
 Companies, in order:
 ${companyList}
 
 For each company, return:
-- elevatorPitch: 2-3 sentences on why this specific company relates to the student's interests, skills, and experience - include at least one concrete example of how a specific experience, project, or course from their background directly connects to what this company does.
+- elevatorPitch: 2-3 sentences, written to the student in second person (e.g. "Your work on X directly connects to..."), explaining why this company relates to their interests, skills, and experience. Include at least one concrete example tying a specific experience, project, or course from their background to what this company does. This is an explanation for the student to read about themselves, not a first-person script for them to recite to a recruiter.
 - questions: 2 thoughtful recruiter questions.
 - overview: 2-3 sentences on what the company actually does/sells/builds.
 - locations: office or headquarters locations, as many real ones as you know (city, state/country) - best estimate if unsure, empty array only if truly unknown.
 - values: 3-5 stated company values or cultural pillars.
 - industries: 1-3 relevant industries/sectors.
 - majors: 3-5 majors or fields of study this company commonly hires from.
-- positions: 3-5 realistic job/internship titles this company would plausibly be hiring for right now, based on its industry and size.
+- positions: 3-5 realistic ${roleType} titles this company would plausibly be hiring for right now, based on its industry and size.
 
 Give your best realistic answer for every field from what you already know about each company - do not say you lack live access or leave a field empty just because you cannot browse the web right now.
 

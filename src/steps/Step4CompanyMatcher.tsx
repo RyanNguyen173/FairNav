@@ -4,17 +4,10 @@ import { BoothNumbers } from '../components/BoothNumbers'
 import { Button } from '../components/Button'
 import { FairSubNav } from '../components/FairSubNav'
 import { Header } from '../components/Header'
+import { MatchBadge } from '../components/MatchBadge'
 import { StepShell } from '../components/StepShell'
 import type { Company } from '../wizard/types'
 import { useActiveFair, useWizard } from '../wizard/WizardContext'
-
-function MatchBadge({ percent }: { percent: number }) {
-  const tone =
-    percent >= 80 ? 'bg-primary text-on-primary' : percent >= 60 ? 'bg-secondary text-on-secondary' : 'bg-muted text-muted-foreground'
-  return (
-    <span className={['shrink-0 rounded-full px-2.5 py-1 text-xs font-bold', tone].join(' ')}>{percent}% match</span>
-  )
-}
 
 function CompanyCard({
   company,

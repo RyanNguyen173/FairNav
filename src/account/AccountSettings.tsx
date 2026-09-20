@@ -1,4 +1,4 @@
-import { Briefcase, GraduationCap, IdentificationCard, Plus, Trash, Warning } from '@phosphor-icons/react'
+import { Briefcase, GraduationCap, IdentificationCard, Plus, Stack, Trash, Warning } from '@phosphor-icons/react'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { Button } from '../components/Button'
@@ -14,6 +14,7 @@ import { useWizard } from '../wizard/WizardContext'
 const POSITION_OPTIONS: { value: TargetPosition; label: string; icon: typeof GraduationCap }[] = [
   { value: 'internship', label: 'Internship', icon: GraduationCap },
   { value: 'fulltime', label: 'Full-Time', icon: Briefcase },
+  { value: 'both', label: 'Both', icon: Stack },
 ]
 
 function ResumeSection() {
@@ -79,7 +80,7 @@ function ResumeSection() {
               id="target-position"
               role="radiogroup"
               aria-label="Target position"
-              className="grid grid-cols-2 gap-2 rounded-xl bg-muted p-1"
+              className="grid grid-cols-3 gap-2 rounded-xl bg-muted p-1"
             >
               {POSITION_OPTIONS.map(({ value, label, icon: Icon }) => {
                 const selected = resume.targetPosition === value

@@ -2,8 +2,6 @@ import {
   Briefcase,
   Buildings,
   ChatCircleDots,
-  Check,
-  Copy,
   DotsSixVertical,
   GraduationCap,
   Heart,
@@ -17,8 +15,9 @@ import { BoothNumbers } from '../components/BoothNumbers'
 import { Button } from '../components/Button'
 import { FairSubNav } from '../components/FairSubNav'
 import { Header } from '../components/Header'
+import { MatchBadge } from '../components/MatchBadge'
 import { ResearchList } from '../components/ResearchList'
-import { SectionCard, StepShell } from '../components/StepShell'
+import { FieldLabel, SectionCard, StepShell } from '../components/StepShell'
 import { generatePreps } from '../wizard/aiEngine'
 import type { Company } from '../wizard/types'
 import { useActiveFair, useWizard } from '../wizard/WizardContext'
@@ -30,36 +29,6 @@ function naturalRect(el: HTMLElement): DOMRect {
   const rect = el.getBoundingClientRect()
   el.style.transform = saved
   return rect
-}
-
-function CopyButton({ text }: { text: string }) {
-  const [copied, setCopied] = useState(false)
-
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(text)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1500)
-    } catch {
-      // Clipboard access can be denied (permissions, insecure context) -
-      // silently no-op rather than showing an error for a non-critical action.
-    }
-  }
-
-  return (
-    <button
-      type="button"
-      onClick={handleCopy}
-      className="flex shrink-0 cursor-pointer items-center gap-1 rounded-full border border-border bg-background px-2.5 py-1 text-xs font-semibold text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-    >
-      {copied ? (
-        <Check size={13} weight="bold" aria-hidden="true" />
-      ) : (
-        <Copy size={13} weight="bold" aria-hidden="true" />
-      )}
-      {copied ? 'Copied' : 'Copy'}
-    </button>
-  )
 }
 
 export function Step5CompanyBriefs() {
@@ -90,7 +59,7 @@ export function Step5CompanyBriefs() {
     setGeneratingId(company.id)
     setGenerateError(null)
     try {
-      const result = await generatePreps(state.profile, [company])
+      const result = await generatePreps(state.profile, [company], fair.targetPosition)
       dispatch({ type: 'PREP_GENERATED', prep: result })
     } catch (error) {
       console.error('Brief generation failed:', error)
@@ -259,9 +228,14 @@ export function Step5CompanyBriefs() {
       <FairSubNav fair={fair} />
       <StepShell
         footer={
-          <Button fullWidth onClick={enterFairMode}>
-            Enter Live Fair Mode
-          </Button>
+          <div className="flex gap-3">
+            <Button variant="secondary" fullWidth onClick={() => router.push('/')}>
+              Finish
+            </Button>
+            <Button fullWidth onClick={enterFairMode}>
+              Enter Live Fair Mode
+            </Button>
+          </div>
         }
       >
         <p className="mb-5 text-sm text-muted-foreground">
@@ -323,7 +297,24 @@ export function Step5CompanyBriefs() {
             <div role="tabpanel">
               <div className="mb-5">
                 <BoothNumbers boothNumbers={activeCompany.boothNumbers} />
-                <h2 className="text-lg font-bold text-foreground">{activeCompany.companyName || 'Unlisted company'}</h2>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-lg font-bold text-foreground">{activeCompany.companyName || 'Unlisted company'}</h2>
+                  <MatchBadge percent={activeCompany.matchScore} />
+                </div>
+              </div>
+
+              <div className="mb-5">
+                <SectionCard>
+                  <FieldLabel htmlFor="company-notes">Company notes</FieldLabel>
+                  <textarea
+                    id="company-notes"
+                    rows={3}
+                    value={fair.fairMode.companyState[activeCompany.id]?.note ?? ''}
+                    onChange={(event) => dispatch({ type: 'SET_NOTE', id: activeCompany.id, note: event.target.value })}
+                    placeholder="Jot down anything to remember about this company…"
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  />
+                </SectionCard>
               </div>
 
               {!activePrep ? (
@@ -359,18 +350,15 @@ export function Step5CompanyBriefs() {
                     <ResearchList icon={Heart} label="Company values" items={activePrep.values} />
                     <ResearchList icon={Tag} label="Industries" items={activePrep.industries} />
                     <ResearchList icon={GraduationCap} label="Majors they hire" items={activePrep.majors} />
-                    <ResearchList icon={Briefcase} label="Open positions" items={activePrep.positions} />
+                    <ResearchList icon={Briefcase} label="Possible positions" items={activePrep.positions} />
                   </div>
 
                   <div className="space-y-5 md:grid md:grid-cols-2 md:gap-5 md:space-y-0">
                     <SectionCard>
-                      <div className="mb-3 flex items-center justify-between gap-2">
-                        <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                          <Lightbulb size={16} weight="fill" className="text-accent-ink" aria-hidden="true" />
-                          Why this company fits you
-                        </h3>
-                        <CopyButton text={activePrep.elevatorPitch} />
-                      </div>
+                      <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
+                        <Lightbulb size={16} weight="fill" className="text-accent-ink" aria-hidden="true" />
+                        Why this company fits you
+                      </h3>
                       <p className="text-sm leading-relaxed text-card-foreground">{activePrep.elevatorPitch}</p>
                     </SectionCard>
 
