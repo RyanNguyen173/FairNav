@@ -145,10 +145,10 @@ through a different relay.
    in place of Supabase's plain default. It uses Supabase's own
    `{{ .ConfirmationURL }}` template variable, so no other change is
    needed.
-3. Confirm `https://fairnav.vercel.app/account-created` (see "Authentication
-   & encryption" below) is still in Authentication → URL Configuration →
-   Redirect URLs — that's independent of the SMTP relay and doesn't change
-   with this switch.
+3. Confirm `https://fairnav.xyz/account-created` (see "Authentication &
+   encryption" below) is in Authentication → URL Configuration → Redirect
+   URLs — that's independent of the SMTP relay and doesn't change with
+   this switch.
 
 ## Using the real AI backend
 
