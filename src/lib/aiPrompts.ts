@@ -91,7 +91,7 @@ ${companyList}
 
 For each and every one of the ${companies.length} companies listed above (do not skip or merge any), return:
 - index: its number from the list above (1-${companies.length}).
-- summary: 2-3 sentences. First cover what the company actually does/sells/builds (a genuine company overview), then explain specifically why it would match or interest this student given their profile above.
+- summary: 2-3 sentences. First cover what the company actually does/sells/builds (a genuine company overview), then explain specifically why it would match or interest you, written directly to the student in second person (e.g. "This is a strong match for you given your..."), using their profile above - not "the student" or "this student" in third person.
 - industry: the single primary industry this company operates in (e.g. "Fintech", "Aerospace", "Healthcare", "Software Engineering").
 - openRoles: 1-2 plausible ${roleType} roles.
 - matchScore: 0-100 reflecting fit with this student.
