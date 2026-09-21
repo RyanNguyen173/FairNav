@@ -1,4 +1,15 @@
-import { Briefcase, CaretLeft, ChatCircleDots, CheckCircle, GraduationCap, Heart, Lightbulb, MapPin, Tag } from '@phosphor-icons/react'
+import {
+  Briefcase,
+  CaretLeft,
+  ChatCircleDots,
+  CheckCircle,
+  GraduationCap,
+  Heart,
+  Lightbulb,
+  MapPin,
+  PaperPlaneTilt,
+  Tag,
+} from '@phosphor-icons/react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { BoothNumbers } from '../components/BoothNumbers'
@@ -158,8 +169,10 @@ export function Step6FairModeHUD() {
                   <ResearchList icon={Heart} label="Company values" items={companyPrep.values} />
                   <ResearchList icon={Tag} label="Industries" items={companyPrep.industries} />
                   <ResearchList icon={GraduationCap} label="Majors they hire" items={companyPrep.majors} />
-                  <ResearchList icon={Briefcase} label="Possible positions" items={companyPrep.positions} />
                 </div>
+
+                {/* Full width, not the grid above's leftover 5th column - a half-width slot leaves too little room for these labels to wrap onto more than one per line. */}
+                <ResearchList icon={Briefcase} label="Possible positions" items={companyPrep.positions} />
 
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <SectionCard>
@@ -183,6 +196,23 @@ export function Step6FairModeHUD() {
                     </ul>
                   </SectionCard>
                 </div>
+
+                <SectionCard>
+                  <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
+                    <PaperPlaneTilt size={16} weight="fill" className="text-accent-ink" aria-hidden="true" />
+                    Talking points for your recruiter conversation
+                  </h3>
+                  <ul className="space-y-2">
+                    {companyPrep.talkingPoints.map((point, i) => (
+                      <li key={i} className="flex gap-2 text-sm leading-relaxed text-card-foreground">
+                        <span className="text-accent-ink" aria-hidden="true">
+                          •
+                        </span>
+                        {point}
+                      </li>
+                    ))}
+                  </ul>
+                </SectionCard>
               </>
             )}
 

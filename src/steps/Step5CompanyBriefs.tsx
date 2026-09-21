@@ -384,6 +384,10 @@ export function Step5CompanyBriefs() {
                     <ResearchList icon={Heart} label="Company values" items={activePrep.values} />
                     <ResearchList icon={Tag} label="Industries" items={activePrep.industries} />
                     <ResearchList icon={GraduationCap} label="Majors they hire" items={activePrep.majors} />
+                  </div>
+
+                  {/* Full width, not the grid above's leftover 5th column - a half-width slot leaves too little room for these labels to wrap onto more than one per line. */}
+                  <div className="mb-5">
                     <ResearchList icon={Briefcase} label="Possible positions" items={activePrep.positions} />
                   </div>
 
