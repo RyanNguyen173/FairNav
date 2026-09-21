@@ -6,6 +6,7 @@ import {
   GraduationCap,
   Heart,
   Lightbulb,
+  Lightning,
   MapPin,
   Tag,
 } from '@phosphor-icons/react'
@@ -50,10 +51,12 @@ export function Step5CompanyBriefs() {
   const activeCompany = selectedCompanies.find((c) => c.id === activeId) ?? selectedCompanies[0]
   const activePrep = activeCompany ? prep[activeCompany.id] : undefined
 
-  // Briefs are generated per-company, on demand, rather than all at once for
-  // every selected company - a student may only want to spend the AI call on
-  // the companies they're actually prioritizing.
+  // Briefs are generated per-company, on demand, by default - a student may
+  // only want to spend the AI call on the companies they're actually
+  // prioritizing. "Generate all" below is the opt-in bulk path for anyone who'd
+  // rather not click into each one individually.
   const [generatingId, setGeneratingId] = useState<string | null>(null)
+  const [bulkGenerating, setBulkGenerating] = useState(false)
   const [generateError, setGenerateError] = useState<string | null>(null)
   const handleGenerateBrief = async (company: Company) => {
     setGeneratingId(company.id)
@@ -66,6 +69,22 @@ export function Step5CompanyBriefs() {
       setGenerateError(error instanceof Error && error.message ? error.message : "Couldn't generate this brief - check your connection and try again.")
     } finally {
       setGeneratingId(null)
+    }
+  }
+
+  const [bulkError, setBulkError] = useState<string | null>(null)
+  const companiesMissingPrep = selectedCompanies.filter((company) => !prep[company.id])
+  const handleGenerateAll = async () => {
+    setBulkGenerating(true)
+    setBulkError(null)
+    try {
+      const result = await generatePreps(state.profile, companiesMissingPrep, fair.targetPosition)
+      dispatch({ type: 'PREP_GENERATED', prep: result })
+    } catch (error) {
+      console.error('Bulk brief generation failed:', error)
+      setBulkError(error instanceof Error && error.message ? error.message : "Couldn't generate briefs - check your connection and try again.")
+    } finally {
+      setBulkGenerating(false)
     }
   }
 
@@ -238,9 +257,23 @@ export function Step5CompanyBriefs() {
           </div>
         }
       >
-        <p className="mb-5 text-sm text-muted-foreground">
-          Generate a personalized brief and questions for each company before you walk the floor.
-        </p>
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-muted-foreground">
+            Generate a personalized brief and questions for each company before you walk the floor.
+          </p>
+          {companiesMissingPrep.length > 0 && (
+            <Button
+              variant="accent"
+              icon={<Lightning size={16} weight="bold" aria-hidden="true" />}
+              disabled={generatingId !== null || bulkGenerating}
+              loading={bulkGenerating}
+              onClick={handleGenerateAll}
+            >
+              Generate all briefs
+            </Button>
+          )}
+        </div>
+        {bulkError && <p className="mb-5 -mt-2 text-sm text-destructive">{bulkError}</p>}
 
         <div className="md:grid md:grid-cols-[220px_1fr] md:gap-6">
           <div ref={listRef} className="mb-5 flex flex-col gap-2 md:mb-0" role="tablist" aria-label="Selected companies">
@@ -324,8 +357,8 @@ export function Step5CompanyBriefs() {
                   </p>
                   {generateError && <p className="mb-3 text-sm text-destructive">{generateError}</p>}
                   <Button
-                    disabled={generatingId !== null}
-                    loading={generatingId === activeCompany.id}
+                    disabled={generatingId !== null || bulkGenerating}
+                    loading={generatingId === activeCompany.id || bulkGenerating}
                     onClick={() => handleGenerateBrief(activeCompany)}
                   >
                     Generate brief
