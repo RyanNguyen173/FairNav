@@ -1,13 +1,49 @@
 # FairNav
 
-A mobile-first career fair copilot. Upload your resume, tell it what you're
-looking for, and FairNav ranks attending companies against your profile,
-writes you a personalized pitch for each one, and guides you booth-to-booth
-during the event with a live route map.
+**Your personal guide for career fairs.** Upload your resume, tell FairNav
+what kind of job you want, and it does the homework so you don't have to:
+it figures out which companies at the fair are actually worth your time,
+explains *why* each one fits you, and then walks you booth-to-booth on the
+day of the event so you always know who's next.
 
 Built for SASEhack 2026 — Social Impact and Design tracks.
 
-## Status: real AI backend + zero-knowledge auth
+## What FairNav does
+
+Career fairs are overwhelming — dozens of tables, no idea which ones matter
+to you, and no time to research all of them beforehand. FairNav turns that
+into a simple, guided process:
+
+1. **Upload your resume once.** FairNav reads it and pulls out your skills,
+   interests, and experience automatically — no forms to fill out by hand.
+2. **Add a fair and its company list.** Upload or paste the list of
+   companies attending (most fairs publish this ahead of time).
+3. **Get a ranked list, made for you.** FairNav compares every company
+   against your background and ranks them by how good a fit they are — with
+   a plain-English explanation of *why*, not just a score.
+4. **Pick who you actually want to visit**, and generate a short, personal
+   "why this fits you" summary for each one — something to glance at right
+   before you walk up to the table.
+5. **On the day of the fair, use Live Fair Mode.** It shows you exactly
+   which company to visit next, tracks who you've already talked to, and
+   lets you jot quick notes as you go — like a checklist for the whole
+   event.
+
+Everything you upload is encrypted on your own device before it's ever sent
+anywhere — see [How your data is protected](#how-your-data-is-protected)
+below for the plain-English version, or
+[Authentication & encryption](#authentication--encryption-technical) for
+the technical details.
+
+---
+
+## For developers
+
+Everything below this line is technical documentation for people building
+or running the project — not required reading if you're just curious what
+FairNav does.
+
+### Status: real AI backend + zero-knowledge auth
 
 Accounts, encryption, and persistence (Supabase Auth + Postgres, AES-256-GCM
 client-side encryption) are live — see "Authentication & encryption" below.
@@ -25,7 +61,9 @@ Every AI step is its own Gemini-backed Next.js Route Handler, each holding
 
 `GEMINI_API_KEY` is required in every real deployment - there is no demo/mock
 fallback. If a call fails (offline, rate limited, misconfigured key), the
-error surfaces to the user rather than being papered over with invented
+error is classified server-side (rate-limited vs. overloaded vs. malformed
+response vs. misconfigured, see `src/lib/gemini.ts`) and surfaces to the
+user with a specific message rather than being papered over with invented
 data, and the UI won't let you proceed past a step (e.g. into Matches)
 without real exhibitor data for the AI to work from in the first place.
 
@@ -45,7 +83,7 @@ One follow-up is intentionally deferred and still open:
   the intended flow (Home only links to a fair's next real step), but worth
   knowing if you're testing by typing URLs directly.
 
-## Stack
+### Stack
 
 - **Next.js (App Router) + React + TypeScript**, fully client-rendered
   (every page is a `'use client'` component - this app is an authenticated
@@ -68,7 +106,7 @@ One follow-up is intentionally deferred and still open:
 - Web Crypto API (PBKDF2 + AES-256-GCM) for client-side encryption —
   `src/lib/crypto.ts`, no dependency.
 
-## Running locally
+### Running locally
 
 ```bash
 npm install
@@ -79,7 +117,21 @@ npm run dev
 the real AI backend" below. Without Supabase env vars set, auth is skipped
 entirely, which is enough to poke at the UI without setting up a project.
 
-## Authentication & encryption
+### How your data is protected
+
+In plain terms: everything you type or upload into FairNav — your resume,
+skills, the companies you're matched with, your notes at the fair — is
+locked with a key derived from your password, on your own device, *before*
+it's sent anywhere to be saved. That means even the database it's stored in
+never sees your real information, only scrambled data it can't read. Only
+you, by entering your password, can unlock it again.
+
+This is why FairNav sometimes asks for your password again on a new visit
+even though you're still signed in — being signed in and being able to
+*decrypt your data* are two different things by design, and that gap is
+what keeps this promise real.
+
+### Authentication & encryption (technical)
 
 Every user's profile, skills, extracted resume data, company matches,
 pitches, and fair-mode notes are encrypted **on their device** before ever
@@ -109,7 +161,7 @@ original spec's magic-link option couldn't supply a password to derive a
 key from anyway, so it would have needed this same unlock step immediately
 after signing in, which added a confusing extra screen for little benefit.
 
-### Setup
+#### Setup
 
 1. Create a free project at [supabase.com](https://supabase.com).
 2. In the SQL Editor, run `supabase/schema.sql` once (creates the
@@ -122,7 +174,7 @@ after signing in, which added a confusing extra screen for little benefit.
    secrecy.
 4. For deployment, set the same two variables in Vercel's project settings.
 
-### Auth emails (Mailtrap)
+#### Auth emails (Mailtrap)
 
 Supabase's own email sender is fine for local testing but rate-limited and
 not meant for production, so signup confirmation emails are sent through
@@ -146,7 +198,7 @@ through a different relay.
    URLs — that's independent of the SMTP relay and doesn't change with
    this switch.
 
-## Using the real AI backend
+### Using the real AI backend
 
 1. Get a key from [Google AI Studio](https://aistudio.google.com/apikey).
 2. Copy `.env.example` to `.env.local` and paste it into `GEMINI_API_KEY`.
@@ -168,7 +220,7 @@ or exhibitor PDF, can take longer than that). If you're on a plan with a
 lower cap, Vercel will tell you at deploy time — lower the number in each
 `app/api/*/route.ts` file to match.
 
-## Project structure
+### Project structure
 
 ```
 app/
@@ -205,7 +257,7 @@ src/
                  desktop (>=768px) layout
 ```
 
-## Design system
+### Design system
 
 "Framer minimalist" system: clean typography, generous whitespace, subtle
 1px card borders, blue accent highlights (#0066FF light / #3B82F6 dark),
