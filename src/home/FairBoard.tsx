@@ -196,8 +196,8 @@ function FairCard({ fair, leaving, onRemove }: { fair: FairProfile; leaving: boo
   }
 
   const status = computeFairStatus(fair)
-  const boothCount = fair.companies.reduce((sum, company) => sum + company.boothNumbers.length, 0)
-  const boothLabel = `${boothCount} target ${boothCount === 1 ? 'booth' : 'booths'}${
+  const companyCount = fair.selectedCompanyIds.length
+  const companyLabel = `${companyCount} target ${companyCount === 1 ? 'company' : 'companies'}${
     status === 'completed' ? ' · all visited' : ''
   }`
 
@@ -244,7 +244,7 @@ function FairCard({ fair, leaving, onRemove }: { fair: FairProfile; leaving: boo
         </span>
         <span className="flex items-center gap-1 text-xs text-muted-foreground">
           <Buildings size={13} weight="fill" aria-hidden="true" />
-          {boothLabel}
+          {companyLabel}
         </span>
       </div>
 
