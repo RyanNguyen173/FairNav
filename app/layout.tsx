@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   title: 'FairNav — Recruitment Reimagined',
   description:
     'FairNav matches your resume to career fair companies, aids your research, and guides your booth route.',
-  icons: { icon: '/favicon.svg' },
+  icons: { icon: '/icon.png', apple: '/icon.png' },
 }
 
 // Runs before hydration so a stored/preferred dark theme applies on first
