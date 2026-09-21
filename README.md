@@ -6,6 +6,8 @@ it figures out which companies at the fair are actually worth your time,
 explains *why* each one fits you, and then walks you booth-to-booth on the
 day of the event so you always know who's next.
 
+**[Try it live at fairnav.xyz →](https://www.fairnav.xyz/)**
+
 Built for SASEhack 2026 — Social Impact and Design tracks.
 
 ## What FairNav does
