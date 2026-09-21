@@ -153,7 +153,7 @@ export function Step6FairModeHUD() {
 
             {companyPrep && (
               <>
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <ResearchList icon={MapPin} label="Locations" items={companyPrep.locations} />
                   <ResearchList icon={Heart} label="Company values" items={companyPrep.values} />
                   <ResearchList icon={Tag} label="Industries" items={companyPrep.industries} />
@@ -161,7 +161,7 @@ export function Step6FairModeHUD() {
                   <ResearchList icon={Briefcase} label="Possible positions" items={companyPrep.positions} />
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <SectionCard>
                     <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
                       <Lightbulb size={16} weight="fill" className="text-accent-ink" aria-hidden="true" />

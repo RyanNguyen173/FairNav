@@ -142,7 +142,7 @@ export function FairDay() {
         <div className="flex flex-col gap-3">
           <div className="font-mono text-[11px] uppercase tracking-[0.08em] text-ink-subtle">Live now</div>
           {liveFairs.length > 0 ? (
-            <div className="fn-grid grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="fn-grid grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {liveFairs.map((fair) => (
                 <LiveCard key={fair.id} fair={fair} />
               ))}
@@ -161,7 +161,7 @@ export function FairDay() {
         {upcoming.length > 0 && (
           <div className="flex flex-col gap-3">
             <div className="font-mono text-[11px] uppercase tracking-[0.08em] text-ink-subtle">Upcoming</div>
-            <div className="fn-grid grid items-stretch gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="fn-grid grid grid-cols-1 items-stretch gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {upcoming.map((fair) => (
                 <UpcomingCard key={fair.id} fair={fair} />
               ))}
@@ -172,7 +172,7 @@ export function FairDay() {
         {completed.length > 0 && (
           <div className="flex flex-col gap-3">
             <div className="font-mono text-[11px] uppercase tracking-[0.08em] text-ink-subtle">Completed</div>
-            <div className="fn-grid grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="fn-grid grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {completed.map((fair) => (
                 <CompletedCard key={fair.id} fair={fair} />
               ))}

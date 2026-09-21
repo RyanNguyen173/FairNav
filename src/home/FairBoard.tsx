@@ -294,7 +294,7 @@ export function FairBoard() {
         </Button>
       </div>
 
-      <div className="fn-grid grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="fn-grid grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {fairProfiles.map((fair) => (
           <FairCard key={fair.id} fair={fair} leaving={leavingIds.has(fair.id)} onRemove={handleRemove} />
         ))}

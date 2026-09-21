@@ -42,7 +42,7 @@ function CompanyCard({
           <MatchBadge percent={company.matchScore} />
         </div>
         <BoothNumbers boothNumbers={company.boothNumbers} />
-        <p className="mb-2.5 text-sm text-muted-foreground">{company.summary}</p>
+        <p className="mb-2.5 break-words text-sm text-muted-foreground">{company.summary}</p>
         <div className="mb-2.5 flex flex-wrap gap-1.5">
           {company.industry && (
             <span
@@ -95,8 +95,12 @@ export function Step4CompanyMatcher() {
       <StepShell
         footer={
           <div className="flex items-center gap-3 md:hidden">
-            <span className="text-sm font-semibold text-foreground">{selectedCount} Selected</span>
-            {generateButton}
+            <span className="shrink-0 whitespace-nowrap text-sm font-semibold text-foreground">
+              {selectedCount} Selected
+            </span>
+            <Button className="flex-1" disabled={selectedCount === 0} onClick={() => router.push('/briefs')}>
+              Continue to Briefs
+            </Button>
           </div>
         }
       >
@@ -105,7 +109,7 @@ export function Step4CompanyMatcher() {
         </p>
 
         <div className="md:grid md:grid-cols-[1fr_300px] md:items-start md:gap-6">
-          <div className="grid gap-3 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             {companies.map((company) => (
               <CompanyCard
                 key={company.id}

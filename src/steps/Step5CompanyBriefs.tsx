@@ -345,7 +345,7 @@ export function Step5CompanyBriefs() {
                     </SectionCard>
                   </div>
 
-                  <div className="mb-5 grid gap-5 md:grid-cols-2">
+                  <div className="mb-5 grid grid-cols-1 gap-5 md:grid-cols-2">
                     <ResearchList icon={MapPin} label="Locations" items={activePrep.locations} />
                     <ResearchList icon={Heart} label="Company values" items={activePrep.values} />
                     <ResearchList icon={Tag} label="Industries" items={activePrep.industries} />
