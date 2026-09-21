@@ -128,7 +128,7 @@ For each company, return:
 - questions: 2 thoughtful recruiter questions.
 - overview: 2-3 sentences on what the company actually does/sells/builds.
 - locations: office or headquarters locations, as many real ones as you know (city, state/country) - best estimate if unsure, empty array only if truly unknown.
-- values: 3-5 stated company values or cultural pillars.
+- values: 3-5 stated company values or cultural pillars. If one is a motto, slogan, or phrase in a language other than English (e.g. a Latin motto), append its English translation/gloss in parentheses right after it (e.g. "Gradatim Ferociter (Step by Step, Ferociously)") so it's immediately legible - never a bare non-English phrase.
 - industries: 1-3 relevant industries/sectors.
 - majors: 3-5 majors or fields of study this company commonly hires from.
 - positions: 3-5 realistic ${roleType} titles this company would plausibly be hiring for right now, based on its industry and size.
