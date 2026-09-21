@@ -460,6 +460,7 @@ function normalizePrep(raw: Record<string, unknown>): CompanyPrep {
     industries: Array.isArray(raw.industries) ? (raw.industries as string[]) : [],
     majors: Array.isArray(raw.majors) ? (raw.majors as string[]) : [],
     positions: Array.isArray(raw.positions) ? (raw.positions as string[]) : [],
+    talkingPoints: Array.isArray(raw.talkingPoints) ? (raw.talkingPoints as string[]) : [],
   }
 }
 

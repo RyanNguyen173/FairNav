@@ -89,6 +89,7 @@ export const GENERATE_PITCHES_SCHEMA: Schema = {
           industries: { type: Type.ARRAY, items: { type: Type.STRING } },
           majors: { type: Type.ARRAY, items: { type: Type.STRING } },
           positions: { type: Type.ARRAY, items: { type: Type.STRING } },
+          talkingPoints: { type: Type.ARRAY, items: { type: Type.STRING } },
         },
         required: [
           'companyName',
@@ -100,6 +101,7 @@ export const GENERATE_PITCHES_SCHEMA: Schema = {
           'industries',
           'majors',
           'positions',
+          'talkingPoints',
         ],
       },
     },

@@ -8,6 +8,7 @@ import {
   Lightbulb,
   Lightning,
   MapPin,
+  PaperPlaneTilt,
   Tag,
 } from '@phosphor-icons/react'
 import { useRouter } from 'next/navigation'
@@ -404,6 +405,25 @@ export function Step5CompanyBriefs() {
                         {activePrep.questions.map((question, index) => (
                           <li key={index} className="text-sm leading-relaxed text-card-foreground">
                             {question}
+                          </li>
+                        ))}
+                      </ul>
+                    </SectionCard>
+                  </div>
+
+                  <div className="mt-5">
+                    <SectionCard>
+                      <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
+                        <PaperPlaneTilt size={16} weight="fill" className="text-accent-ink" aria-hidden="true" />
+                        Talking points for your recruiter conversation
+                      </h3>
+                      <ul className="space-y-2.5">
+                        {activePrep.talkingPoints.map((point, index) => (
+                          <li key={index} className="flex gap-2 text-sm leading-relaxed text-card-foreground">
+                            <span className="text-accent-ink" aria-hidden="true">
+                              •
+                            </span>
+                            {point}
                           </li>
                         ))}
                       </ul>

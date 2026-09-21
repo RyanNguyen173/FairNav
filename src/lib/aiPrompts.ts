@@ -132,6 +132,7 @@ For each company, return:
 - industries: 1-3 relevant industries/sectors.
 - majors: 3-5 majors or fields of study this company commonly hires from.
 - positions: 3-5 realistic ${roleType} titles this company would plausibly be hiring for right now, based on its industry and size.
+- talkingPoints: 3-4 concrete talking points for the student to bring up in the actual conversation, each tying a specific experience, project, or skill from their background to something specific about this company (not a restatement of elevatorPitch - these are individually actionable lines, written as direct suggestions, e.g. "Bring up X - it connects to their Y").
 
 Give your best realistic answer for every field from what you already know about each company - do not say you lack live access or leave a field empty just because you cannot browse the web right now.
 

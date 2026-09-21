@@ -96,6 +96,8 @@ export interface CompanyPrep {
   industries: string[]
   majors: string[]
   positions: string[]
+  /** Concrete talking points tying the student's own experience to this company, to bring up in conversation. */
+  talkingPoints: string[]
 }
 
 export interface FairModeCompanyState {
