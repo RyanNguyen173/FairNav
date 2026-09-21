@@ -4,9 +4,9 @@ import { Providers } from './providers'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'FairNav — Career Fair Copilot',
+  title: 'FairNav — Recruitment Reimagined',
   description:
-    'FairNav matches your resume to career fair companies, preps your pitch, and guides your booth route live.',
+    'FairNav matches your resume to career fair companies, aids your research, and guides your booth route.',
   icons: { icon: '/favicon.svg' },
 }
 

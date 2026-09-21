@@ -34,13 +34,13 @@ const PURPOSE = [
   },
   {
     icon: '/icon-plane.png',
-    title: 'A pitch per company',
-    body: 'An elevator pitch and useful information for each company you select, written against what that company actually recruits for.',
+    title: 'A profile per company',
+    body: 'A profile and useful information for each company you select, written against what that company actually recruits for.',
   },
   {
     icon: '/logo-cat.png',
     title: 'Fair day, tracked',
-    body: 'Mark booths visited, keep a note on each conversation, and see what is left before the hall closes.',
+    body: 'Mark companies visited, keep a note on each conversation, and see what is left before the hall closes.',
   },
 ]
 
@@ -274,7 +274,7 @@ export function AuthScreen() {
 
       <section className="mx-auto grid max-w-[1120px] grid-cols-1 items-start gap-16 px-4 py-12 md:grid-cols-[1fr_1fr] md:px-8 md:py-16">
         <div className="fn-in flex flex-col gap-6 pt-6">
-          <div className="font-mono text-xs uppercase tracking-[0.06em] text-accent-ink">Career fair copilot</div>
+          <div className="font-mono text-xs uppercase tracking-[0.06em] text-accent-ink">Recruitment Reimagined</div>
           <h1 className="m-0 text-[40px] font-medium leading-[1.05] tracking-[-0.04em] text-balance md:text-[52px]">
             Know who to talk to before you walk in.
           </h1>
@@ -435,7 +435,7 @@ export function AuthScreen() {
           </div>
           <div className="flex flex-col gap-5 text-base leading-relaxed">
             <p className="m-0">
-              Your profile, matches, pitches and fair-day notes are encrypted in the browser with AES-256-GCM, using
+              Your profile, matches, and fair-day notes are encrypted in the browser with AES-256-GCM, using
               a key derived from your password. The database only ever holds ciphertext.
             </p>
             <p className="m-0">
