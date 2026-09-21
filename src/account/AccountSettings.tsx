@@ -42,7 +42,7 @@ function ResumeSection() {
     } catch (error) {
       console.error('Resume parsing failed:', error)
       dispatch({ type: 'RESUME_PARSE_FAILED' })
-      setParseError("Couldn't parse that resume - check your connection and try again.")
+      setParseError(error instanceof Error && error.message ? error.message : "Couldn't parse that resume - check your connection and try again.")
     }
   }
 

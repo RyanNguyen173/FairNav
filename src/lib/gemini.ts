@@ -107,9 +107,38 @@ export const GENERATE_PITCHES_SCHEMA: Schema = {
   required: ['pitches'],
 }
 
+/**
+ * Turns a thrown error into an (httpStatus, message) pair that's actually
+ * useful to the caller, instead of a blanket 500 "AI request failed" for
+ * everything from a transient overload to a malformed model response to a
+ * missing API key.
+ */
+function classifyError(error: unknown): { status: number; message: string } {
+  if (error instanceof ApiError) {
+    if (error.status === 429) return { status: 503, message: 'AI service is rate-limited right now - try again shortly.' }
+    if (error.status === 503) return { status: 503, message: 'AI service is temporarily overloaded - try again shortly.' }
+    if (error.status === 401 || error.status === 403) {
+      // Never echo the SDK's own message here - it can include request
+      // details tied to the API key. The real cause belongs in the server log.
+      return { status: 500, message: 'AI service is misconfigured.' }
+    }
+    if (error.status === 400) return { status: 502, message: 'AI service rejected the request.' }
+    return { status: 502, message: 'AI request failed.' }
+  }
+  // JSON.parse on the model's own response.text - the model returned text
+  // that didn't match its response schema (rare, but response schemas are
+  // a strong hint, not a hard guarantee).
+  if (error instanceof SyntaxError) return { status: 502, message: 'AI returned an unexpected response format.' }
+  if (error instanceof Error && error.message === 'GEMINI_API_KEY is not configured') {
+    return { status: 500, message: 'AI service is misconfigured.' }
+  }
+  return { status: 500, message: 'AI request failed.' }
+}
+
 /** Standard client init + error handling wrapper around a POST body's `payload`. */
 export async function withGeminiHandler(
   request: NextRequest,
+  routeName: string,
   run: (ai: GoogleGenAI, payload: unknown) => Promise<unknown>,
 ) {
   try {
@@ -118,7 +147,8 @@ export async function withGeminiHandler(
     const result = await run(ai, payload)
     return NextResponse.json(result)
   } catch (error) {
-    console.error('Gemini request failed:', error)
-    return NextResponse.json({ error: 'AI request failed' }, { status: 500 })
+    const { status, message } = classifyError(error)
+    console.error(`[${routeName}] Gemini request failed (responding ${status}):`, error)
+    return NextResponse.json({ error: message }, { status })
   }
 }

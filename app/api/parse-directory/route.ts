@@ -10,7 +10,7 @@ interface ParseDirectoryPayload {
 }
 
 export async function POST(request: NextRequest) {
-  return withGeminiHandler(request, async (ai, payload) => {
+  return withGeminiHandler(request, 'parse-directory', async (ai, payload) => {
     const { rawText, file } = payload as ParseDirectoryPayload
 
     // The caller is expected to gate this on real input existing - never

@@ -10,7 +10,7 @@ interface ParseResumePayload {
 }
 
 export async function POST(request: NextRequest) {
-  return withGeminiHandler(request, async (ai, payload) => {
+  return withGeminiHandler(request, 'parse-resume', async (ai, payload) => {
     const { mimeType, dataBase64 } = payload as ParseResumePayload
 
     const prompt = `Extract structured information from the attached resume.

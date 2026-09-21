@@ -14,7 +14,7 @@ interface GeneratePitchesPayload {
 }
 
 export async function POST(request: NextRequest) {
-  return withGeminiHandler(request, async (ai, payload) => {
+  return withGeminiHandler(request, 'generate-pitches', async (ai, payload) => {
     const { profile, companies, targetPosition } = payload as GeneratePitchesPayload
 
     const response = await generateWithRetry(ai, {

@@ -72,7 +72,9 @@ export function Step3FairIngestion() {
       console.error('Fair analysis failed:', error)
       setAnalyzedSignature(null)
       dispatch({ type: 'FAIR_ANALYSIS_FAILED' })
-      setAnalysisError("Couldn't analyze the directory - check your connection and try again.")
+      setAnalysisError(
+        error instanceof Error && error.message ? error.message : "Couldn't analyze the directory - check your connection and try again.",
+      )
       return false
     }
   }

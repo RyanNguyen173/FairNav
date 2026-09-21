@@ -13,7 +13,7 @@ interface RankCompaniesPayload {
 }
 
 export async function POST(request: NextRequest) {
-  return withGeminiHandler(request, async (ai, payload) => {
+  return withGeminiHandler(request, 'rank-companies', async (ai, payload) => {
     const { profile, companies, targetPosition } = payload as RankCompaniesPayload
 
     const response = await generateWithRetry(ai, {

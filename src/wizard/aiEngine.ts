@@ -18,7 +18,8 @@ async function callApi<T>(endpoint: string, payload: unknown): Promise<T> {
   })
 
   if (!response.ok) {
-    throw new Error(`${endpoint} request failed with status ${response.status}`)
+    const body = (await response.json().catch(() => null)) as { error?: string } | null
+    throw new Error(body?.error || `${endpoint} request failed with status ${response.status}`)
   }
 
   return (await response.json()) as T

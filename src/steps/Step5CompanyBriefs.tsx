@@ -63,7 +63,7 @@ export function Step5CompanyBriefs() {
       dispatch({ type: 'PREP_GENERATED', prep: result })
     } catch (error) {
       console.error('Brief generation failed:', error)
-      setGenerateError("Couldn't generate this brief - check your connection and try again.")
+      setGenerateError(error instanceof Error && error.message ? error.message : "Couldn't generate this brief - check your connection and try again.")
     } finally {
       setGeneratingId(null)
     }
